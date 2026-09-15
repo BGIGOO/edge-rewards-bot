@@ -1,0 +1,50 @@
+================================================================================
+          HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG TOOL AUTO MICROSOFT REWARDS
+================================================================================
+
+Tool này giúp bạn tự động tìm kiếm trên Microsoft Edge hàng ngày để ăn trọn điểm thưởng
+Microsoft Rewards (cả tìm kiếm Máy tính Desktop và Điện thoại Mobile).
+Đã tích hợp cơ chế chống ban (gõ phím từng ký tự, cuộn trang đọc bài, nghỉ ngẫu nhiên).
+
+--------------------------------------------------------------------------------
+BƯỚC 1: KIỂM TRA MÁY ĐÃ CÀI PYTHON CHƯA
+--------------------------------------------------------------------------------
+1. Nếu máy bạn CHƯA cài Python:
+   - Vào https://www.python.org/downloads/ tải bản Python mới nhất về.
+   - Khi cài đặt, ở màn hình đầu tiên nhớ TÍCH CHỌN vào ô:
+     [✔] "Add python.exe to PATH"  <-- RẤT QUAN TRỌNG!
+   - Bấm Install Now để hoàn tất.
+
+2. Nếu máy bạn ĐÃ CÓ Python rồi thì bỏ qua bước này.
+
+--------------------------------------------------------------------------------
+BƯỚC 2: CHẠY TOOL LẦN ĐẦU TIÊN
+--------------------------------------------------------------------------------
+1. Nhấp đúp chuột vào file: [setup_and_run.bat]
+   (File này sẽ tự động cài các thư viện cần thiết và khởi động bot).
+
+2. Cửa sổ Microsoft Edge sẽ tự động mở lên:
+   - Bạn chỉ cần bấm "Sign In" (Đăng nhập) tài khoản Microsoft Rewards của bạn vào trang Bing trên cửa sổ Edge này.
+   - Đăng nhập xong, bạn quay lại bảng đen (cmd) nhấn phím ENTER.
+
+3. Bot sẽ tự động chạy:
+   - Phần 1: Tự động tìm kiếm 32 lượt trên máy tính (PC).
+   - Phần 2: Tự động giả lập điện thoại tìm kiếm 22 lượt trên di động (Mobile).
+   - Bot có gõ từng chữ, cuộn trang đọc kết quả và nghỉ ngơi giống y hệt người thật.
+
+--------------------------------------------------------------------------------
+BƯỚC 3: CÁCH DÙNG HÀNG NGÀY (TỪ LẦN THỨ 2 TRỞ ĐI)
+--------------------------------------------------------------------------------
+- Tài khoản của bạn đã được lưu vĩnh viễn, KHÔNG CẦN ĐĂNG NHẬP LẠI NỮA!
+- Mỗi ngày bạn chỉ cần nhấp đúp chuột vào file: [run_bot.bat]
+- Ngồi uống cà phê chờ vài phút là xong toàn bộ điểm thưởng trong ngày!
+- Bạn vẫn có thể mở Microsoft Edge bình thường để làm việc, lướt web mà không hề bị ảnh hưởng hay xung đột.
+
+--------------------------------------------------------------------------------
+TÙY CHỈNH (NẾU CẦN):
+--------------------------------------------------------------------------------
+Mở file [config.json] bằng Notepad để chỉnh:
+- "pc_searches": số lượt tìm kiếm PC (mặc định 32).
+- "mobile_searches": số lượt tìm kiếm Mobile (mặc định 22).
+- "min_delay_seconds" & "max_delay_seconds": thời gian nghỉ giữa các lần tìm kiếm.
+================================================================================

@@ -1,0 +1,19 @@
+{
+  "search_settings": {
+    "pc_searches": 31,
+    "mobile_searches": 21,
+    "min_delay_seconds": 3,
+    "max_delay_seconds": 8,
+    "enable_cooldown_batches": false,
+    "batch_size": 4,
+    "batch_cooldown_minutes": 3,
+    "enable_smooth_scrolling": true,
+    "human_typing_speed_min": 0.02,
+    "human_typing_speed_max": 0.10
+  },
+  "browser_settings": {
+    "profile_directory_path": "./edge_profile",
+    "headless": false,
+    "mobile_device_name": "iPhone 12 Pro"
+  }
+}
