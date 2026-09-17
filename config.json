@@ -2,18 +2,20 @@
   "search_settings": {
     "pc_searches": 31,
     "mobile_searches": 21,
-    "min_delay_seconds": 5,
-    "max_delay_seconds": 10,
-    "enable_cooldown_batches": false,
+    "min_delay_seconds": 12,
+    "max_delay_seconds": 22,
+    "enable_cooldown_batches": true,
     "batch_size": 4,
-    "batch_cooldown_minutes": 7,
+    "batch_cooldown_minutes": 5,
     "enable_smooth_scrolling": true,
+    "enable_mouse_movement": true,
+    "random_click_chance": 0.25,
     "human_typing_speed_min": 0.04,
     "human_typing_speed_max": 0.10
   },
   "browser_settings": {
     "profile_directory_path": "./edge_profile",
     "headless": false,
-    "mobile_device_name": "iPhone 13"
+    "mobile_device_name": "Pixel 7"
   }
 }

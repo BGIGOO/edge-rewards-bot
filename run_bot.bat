@@ -16,7 +16,20 @@ if %ERRORLEVEL% neq 0 (
     exit /b
 )
 
-python edge_rewards_bot.py
+echo Chon che do chay:
+echo [1] Chi tim kiem Desktop / PC  (Nen chay buoi sang / trua)
+echo [2] Chi tim kiem Mobile        (Nen chay buoi chieu / toi)
+echo [3] Chay ca hai (Desktop roi Mobile)
+echo.
+set /p choice="Nhap lua chon (1/2/3) [Mac dinh la 1]: "
+
+if "%choice%"=="2" (
+    python edge_rewards_bot.py --mode mobile
+) else if "%choice%"=="3" (
+    python edge_rewards_bot.py --mode all
+) else (
+    python edge_rewards_bot.py --mode desktop
+)
 
 if %ERRORLEVEL% neq 0 (
     echo.
