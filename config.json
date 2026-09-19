@@ -6,7 +6,7 @@
     "max_delay_seconds": 22,
     "enable_cooldown_batches": true,
     "batch_size": 4,
-    "batch_cooldown_minutes": 5,
+    "batch_cooldown_minutes": 3,
     "enable_smooth_scrolling": true,
     "enable_mouse_movement": true,
     "random_click_chance": 0.25,

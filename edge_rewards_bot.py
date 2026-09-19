@@ -41,6 +41,7 @@ try:
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+    from webdriver_manager.microsoft import EdgeChromiumDriverManager
 except ImportError:
     print("[!] Selenium chưa được cài đặt. Đang tự động cài đặt...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "selenium", "webdriver-manager"])
@@ -52,6 +53,7 @@ except ImportError:
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+    from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 # Đường dẫn thư mục script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -163,8 +165,13 @@ def create_edge_driver(is_mobile=False, config=None):
     else:
         options.add_argument("--start-maximized")
 
-    # Khởi tạo Driver
-    driver = webdriver.Edge(options=options)
+    # Khởi tạo Driver (dùng webdriver-manager để tự động tìm/tải đúng msedgedriver)
+    try:
+        service = EdgeService(EdgeChromiumDriverManager().install())
+        driver = webdriver.Edge(service=service, options=options)
+    except Exception as e_mgr:
+        print(f"[!] webdriver-manager thất bại ({e_mgr}), thử khởi động trực tiếp...")
+        driver = webdriver.Edge(options=options)
 
     # 4. Tiêm script xóa cờ navigator.webdriver và giả lập runtime (Stealth Mode)
     try:
