@@ -15,7 +15,16 @@ if %ERRORLEVEL% neq 0 (
     exit /b
 )
 
-python edge_rewards_bot.py --mode mobile
+echo --------------------------------------------------------------------
+echo CHON TAI KHOAN / PROFILE:
+echo [1] Profile 1 (manhnguyen1745@gmail.com)
+echo [2] Profile 2 (manhnguyen1768@gmail.com)
+echo [3] Chay ca 2 Profile (Lan luot Profile 1 roi Profile 2)
+echo --------------------------------------------------------------------
+set /p prof="Nhap lua chon tai khoan (1/2/3) [Mac dinh: 1]: "
+if "%prof%"=="" set prof=1
+
+python edge_rewards_bot.py --mode mobile --profile %prof%
 
 if %ERRORLEVEL% neq 0 (
     echo.

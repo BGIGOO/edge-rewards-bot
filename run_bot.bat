@@ -16,20 +16,33 @@ if %ERRORLEVEL% neq 0 (
     exit /b
 )
 
-echo Chon che do chay:
+echo --------------------------------------------------------------------
+echo CHON TAI KHOAN / PROFILE:
+echo [1] Profile 1 (manhnguyen1745@gmail.com)
+echo [2] Profile 2 (manhnguyen1768@gmail.com)
+echo [3] Chay ca 2 Profile (Lan luot Profile 1 roi Profile 2)
+echo --------------------------------------------------------------------
+set /p prof="Nhap lua chon tai khoan (1/2/3) [Mac dinh: 1]: "
+if "%prof%"=="" set prof=1
+
+echo.
+echo --------------------------------------------------------------------
+echo CHON CHE DO TIM KIEM:
 echo [1] Chi tim kiem Desktop / PC  (Nen chay buoi sang / trua)
 echo [2] Chi tim kiem Mobile        (Nen chay buoi chieu / toi)
 echo [3] Chay ca hai (Desktop roi Mobile)
-echo.
-set /p choice="Nhap lua chon (1/2/3) [Mac dinh la 1]: "
+echo --------------------------------------------------------------------
+set /p choice="Nhap lua chon che do (1/2/3) [Mac dinh: 1]: "
 
 if "%choice%"=="2" (
-    python edge_rewards_bot.py --mode mobile
+    set selected_mode=mobile
 ) else if "%choice%"=="3" (
-    python edge_rewards_bot.py --mode all
+    set selected_mode=all
 ) else (
-    python edge_rewards_bot.py --mode desktop
+    set selected_mode=desktop
 )
+
+python edge_rewards_bot.py --profile %prof% --mode %selected_mode%
 
 if %ERRORLEVEL% neq 0 (
     echo.

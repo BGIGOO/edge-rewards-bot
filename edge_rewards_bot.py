@@ -19,6 +19,7 @@ import sys
 import time
 import json
 import random
+import shutil
 import subprocess
 import argparse
 from datetime import datetime
@@ -82,7 +83,19 @@ def load_config():
             "profile_directory_path": "./edge_profile",
             "headless": False,
             "mobile_device_name": "Pixel 7"
-        }
+        },
+        "profiles": [
+            {
+                "id": "1",
+                "name": "Tài khoản 1 (Chính)",
+                "path": "./edge_profile"
+            },
+            {
+                "id": "2",
+                "name": "Tài khoản 2 (Phụ)",
+                "path": "./edge_profile_2"
+            }
+        ]
     }
     if os.path.exists(CONFIG_PATH):
         try:
@@ -90,6 +103,8 @@ def load_config():
                 loaded = json.load(f)
                 default_config["search_settings"].update(loaded.get("search_settings", {}))
                 default_config["browser_settings"].update(loaded.get("browser_settings", {}))
+                if "profiles" in loaded and isinstance(loaded["profiles"], list):
+                    default_config["profiles"] = loaded["profiles"]
         except Exception as e:
             print(f"[!] Không đọc được config.json ({e}), dùng cấu hình mặc định.")
     return default_config
@@ -126,23 +141,84 @@ def load_keywords():
     return keywords
 
 
-def get_profile_abs_path(config):
-    """Lấy đường dẫn thư mục profile Edge an toàn"""
-    p_path = config.get("browser_settings", {}).get("profile_directory_path", "./edge_profile")
+def get_profile_abs_path(target=None, base_dir=SCRIPT_DIR):
+    """Lấy đường dẫn thư mục profile Edge an toàn (hỗ trợ config, profile dict hoặc đường dẫn chuỗi)"""
+    p_path = "./edge_profile"
+    if isinstance(target, str):
+        p_path = target
+    elif isinstance(target, dict):
+        p_path = (target.get("path")
+                  or target.get("profile_path")
+                  or target.get("browser_settings", {}).get("profile_directory_path", "./edge_profile"))
+
+    p_path = os.path.expandvars(p_path)
     if not os.path.isabs(p_path):
-        p_path = os.path.abspath(os.path.join(SCRIPT_DIR, p_path))
+        p_path = os.path.abspath(os.path.join(base_dir, p_path))
     os.makedirs(p_path, exist_ok=True)
     return p_path
 
 
-def create_edge_driver(is_mobile=False, config=None):
+def sync_profile_from_system(profile):
+    """Tự động đồng bộ cookie/session từ Edge gốc của máy vào thư mục profile bot nếu có"""
+    if not isinstance(profile, dict):
+        return
+    profile_dir_name = profile.get("profile_directory")
+    if not profile_dir_name:
+        return
+
+    user_data = os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\User Data")
+    src_profile = os.path.join(user_data, profile_dir_name)
+    if not os.path.exists(src_profile):
+        return
+
+    target_dir = get_profile_abs_path(profile)
+    dst_profile = os.path.join(target_dir, profile_dir_name)
+    os.makedirs(os.path.join(dst_profile, "Network"), exist_ok=True)
+
+    # 1. Đồng bộ Local State (chỉ chép nếu chưa có)
+    local_state_src = os.path.join(user_data, "Local State")
+    local_state_dst = os.path.join(target_dir, "Local State")
+    try:
+        if os.path.exists(local_state_src) and not os.path.exists(local_state_dst):
+            shutil.copy2(local_state_src, local_state_dst)
+    except Exception:
+        pass
+
+    # 2. Đồng bộ các file session quan trọng nếu chưa có
+    for fname in ["Preferences", "Secure Preferences", "Web Data", "Login Data"]:
+        fsrc = os.path.join(src_profile, fname)
+        fdst = os.path.join(dst_profile, fname)
+        if os.path.exists(fsrc) and not os.path.exists(fdst):
+            try:
+                shutil.copy2(fsrc, fdst)
+            except Exception:
+                pass
+
+    # 3. Đồng bộ Cookies nếu chưa có
+    c_src = os.path.join(src_profile, "Network", "Cookies")
+    c_dst = os.path.join(dst_profile, "Network", "Cookies")
+    if os.path.exists(c_src) and not os.path.exists(c_dst):
+        try:
+            shutil.copy2(c_src, c_dst)
+        except Exception:
+            pass
+
+
+def create_edge_driver(is_mobile=False, config=None, profile_target=None):
     """Khởi tạo trình duyệt Edge với profile riêng biệt chống xung đột và chống phát hiện bot"""
     options = EdgeOptions()
-    browser_cfg = config.get("browser_settings", {})
-    profile_dir = get_profile_abs_path(config)
+    browser_cfg = config.get("browser_settings", {}) if config else {}
+    target_prof = profile_target if profile_target is not None else config
+
+    # Tự động đồng bộ session từ Edge nếu cần
+    sync_profile_from_system(target_prof)
+
+    profile_dir = get_profile_abs_path(target_prof)
 
     # 1. Đường dẫn Profile riêng biệt
     options.add_argument(f"--user-data-dir={profile_dir}")
+    if isinstance(target_prof, dict) and target_prof.get("profile_directory"):
+        options.add_argument(f"--profile-directory={target_prof['profile_directory']}")
 
     # 2. Cờ tắt chế độ Automation & Chống Bot Detection
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -369,31 +445,46 @@ def simulate_random_result_click(driver, click_chance=0.35):
         return False
 
 
-def check_and_prompt_first_time_login(driver):
+def check_and_prompt_first_time_login(driver, profile_name="Tài khoản này"):
     """Kiểm tra nếu người dùng chưa đăng nhập tài khoản Microsoft trên profile này"""
     try:
         driver.get("https://www.bing.com")
         time.sleep(2)
         dismiss_popups(driver)
 
-        # Kiểm tra sự hiện diện của nút Sign In / Đăng nhập
-        sign_in_elements = driver.find_elements(By.ID, "id_s") + driver.find_elements(By.CSS_SELECTOR, "a[id*='signin']")
-        needs_login = False
-        for el in sign_in_elements:
-            if el.is_displayed() and ("sign in" in el.text.lower() or "đăng nhập" in el.text.lower()):
-                needs_login = True
-                break
+        # Lấy thông tin tài khoản hiện tại trên Bing nếu đã đăng nhập
+        logged_name = None
+        for sel in ["#id_n", "#id_s", ".id_text"]:
+            try:
+                elem = driver.find_element(By.CSS_SELECTOR, sel)
+                txt = elem.text.strip()
+                if txt and not any(k in txt.lower() for k in ["sign in", "đăng nhập", "login"]):
+                    logged_name = txt
+                    break
+            except Exception:
+                continue
 
-        if needs_login:
-            print("\n" + "=" * 65)
-            print("🔔 THÔNG BÁO ĐĂNG NHẬP (Chỉ thực hiện LẦN ĐẦU TIÊN duy nhất):")
-            print("   Trình duyệt Edge vừa mở lên. Bạn hãy bấm 'Sign In' (Đăng nhập)")
-            print("   bằng tài khoản Microsoft Rewards của bạn trên cửa sổ Edge này.")
-            print("   (Từ những lần chạy sau, tài khoản sẽ tự động lưu vĩnh viễn!)")
-            print("=" * 65)
-            input("👉 Sau khi bạn đã đăng nhập xong trên Edge, hãy nhấn ENTER tại đây để bắt đầu cày điểm...")
-            time.sleep(2)
-            dismiss_popups(driver)
+        if logged_name:
+            print(f"   [✓] Tài khoản Bing đang kết nối: \"{logged_name}\"")
+        else:
+            # Kiểm tra sự hiện diện của nút Sign In / Đăng nhập
+            sign_in_elements = driver.find_elements(By.ID, "id_s") + driver.find_elements(By.CSS_SELECTOR, "a[id*='signin']")
+            needs_login = False
+            for el in sign_in_elements:
+                if el.is_displayed() and ("sign in" in el.text.lower() or "đăng nhập" in el.text.lower()):
+                    needs_login = True
+                    break
+
+            if needs_login:
+                print("\n" + "=" * 65)
+                print(f"🔔 THÔNG BÁO ĐĂNG NHẬP ({profile_name}):")
+                print(f"   Trình duyệt Edge vừa mở profile [{profile_name}].")
+                print("   Bạn hãy bấm 'Sign In' (Đăng nhập) bằng tài khoản Microsoft Rewards tương ứng.")
+                print("   (Chỉ cần đăng nhập 1 LẦN DUY NHẤT, từ lần sau bot tự nhớ vĩnh viễn!)")
+                print("=" * 65)
+                input("👉 Sau khi bạn đã đăng nhập xong trên Edge, hãy nhấn ENTER tại đây để bắt đầu cày điểm...")
+                time.sleep(2)
+                dismiss_popups(driver)
     except Exception as e:
         pass
 
@@ -514,8 +605,110 @@ def execute_search_session(driver, keywords, num_searches, mode_name="PC", confi
     return completed
 
 
+def run_profile_session(profile, selected_mode, config, keywords_pool=None):
+    """Thực hiện phiên tìm kiếm cho một tài khoản / profile cụ thể"""
+    profile_name = profile.get("name", f"Profile {profile.get('id', '1')}")
+    profile_dir = get_profile_abs_path(profile)
+
+    run_pc = selected_mode in ["all", "desktop"]
+    run_mobile = selected_mode in ["all", "mobile"]
+
+    search_cfg = config.get("search_settings", {})
+    pc_count = search_cfg.get("pc_searches", 31) if run_pc else 0
+    mobile_count = search_cfg.get("mobile_searches", 21) if run_mobile else 0
+    device_name = config.get("browser_settings", {}).get("mobile_device_name", "Pixel 7")
+
+    print("\n" + "=" * 66)
+    print(f"👤 BẮT ĐẦU PHIÊN CHẠY CHO: {profile_name.upper()}")
+    print(f"[*] Thư mục Profile   : {profile_dir}")
+    print(f"[*] Chế độ đang chạy  : {selected_mode.upper()}")
+    print(f"[*] Kế hoạch chạy chi tiết:")
+    if run_pc:
+        print(f"   - Desktop (PC)        : {pc_count} lượt tìm kiếm")
+    if run_mobile:
+        print(f"   - Mobile (Android)    : {mobile_count} lượt (Thiết bị: {device_name})")
+    print(f"   - Giãn cách an toàn   : {search_cfg.get('min_delay_seconds')}s - {search_cfg.get('max_delay_seconds')}s / lượt")
+    print(f"   - Chế độ Cooldown     : {'BẬT (Mỗi ' + str(search_cfg.get('batch_size', 4)) + ' lượt nghỉ ' + str(search_cfg.get('batch_cooldown_minutes', 5)) + ' phút)' if search_cfg.get('enable_cooldown_batches') else 'TẮT'}")
+    print(f"   - Click đọc bài (CTR) : {int(search_cfg.get('random_click_chance', 0.25) * 100)}% ngẫu nhiên")
+    print(f"   - Rê chuột tự nhiên   : {'BẬT' if search_cfg.get('enable_mouse_movement', True) else 'TẮT'}")
+    print("=" * 66)
+
+    # Nạp danh sách từ khóa riêng cho profile này (xáo trộn)
+    if keywords_pool:
+        keywords = list(keywords_pool)
+    else:
+        keywords = load_keywords()
+    random.shuffle(keywords)
+    print(f"[✓] Đã chuẩn bị {len(keywords)} từ khóa tìm kiếm tự nhiên cho {profile_name}.")
+
+    total_searches_done = 0
+    start_time = datetime.now()
+
+    # ==========================
+    # PHẦN 1: TÌM KIẾM DESKTOP (PC)
+    # ==========================
+    if run_pc and pc_count > 0:
+        print(f"\n🖥️  [{profile_name}] Đang khởi động Microsoft Edge ở chế độ Desktop (PC)...")
+        pc_driver = None
+        try:
+            pc_driver = create_edge_driver(is_mobile=False, config=config, profile_target=profile)
+            check_and_prompt_first_time_login(pc_driver, profile_name=profile_name)
+            searches_pc = execute_search_session(pc_driver, keywords, pc_count, mode_name="PC", config=config)
+            total_searches_done += searches_pc
+        except Exception as e:
+            print(f"[!] Lỗi trong phiên tìm kiếm PC ({profile_name}): {e}")
+        finally:
+            if pc_driver:
+                print(f"[*] Đang đóng phiên duyệt Desktop của {profile_name}...")
+                try:
+                    pc_driver.quit()
+                except Exception:
+                    pass
+                time.sleep(2)
+
+        # Nếu chạy cả hai chế độ thì tạm nghỉ giữa 2 phiên
+        if run_mobile and mobile_count > 0:
+            transition_pause = random.uniform(8, 15)
+            print(f"\n[⏳] Tạm nghỉ {transition_pause:.1f}s trước khi chuyển sang chế độ Mobile...")
+            time.sleep(transition_pause)
+
+    # ==========================
+    # PHẦN 2: TÌM KIẾM MOBILE
+    # ==========================
+    if run_mobile and mobile_count > 0:
+        step_label = "[2]" if run_pc else "[1]"
+        print(f"\n📱 [{profile_name}] {step_label} Đang khởi động Microsoft Edge ở chế độ Mobile (Giả lập {device_name})...")
+        mobile_driver = None
+        try:
+            mobile_driver = create_edge_driver(is_mobile=True, config=config, profile_target=profile)
+            check_and_prompt_first_time_login(mobile_driver, profile_name=profile_name)
+            searches_mob = execute_search_session(mobile_driver, keywords, mobile_count, mode_name="MOBILE", config=config)
+            total_searches_done += searches_mob
+        except Exception as e:
+            print(f"[!] Lỗi trong phiên tìm kiếm Mobile ({profile_name}): {e}")
+        finally:
+            if mobile_driver:
+                print(f"[*] Đang đóng phiên duyệt Mobile của {profile_name}...")
+                try:
+                    mobile_driver.quit()
+                except Exception:
+                    pass
+                time.sleep(2)
+
+    duration = datetime.now() - start_time
+    minutes, seconds = divmod(int(duration.total_seconds()), 60)
+    print(f"\n[✓] Hoàn thành cho {profile_name}: {total_searches_done} lượt tìm kiếm ({minutes} phút {seconds} giây).")
+    return {
+        "profile_name": profile_name,
+        "searches": total_searches_done,
+        "duration": duration
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Microsoft Rewards Auto Search Bot")
+    parser.add_argument("--profile", default=None,
+                        help="Chọn profile tài khoản: 1, 2, all (hoặc theo id/tên)")
     parser.add_argument("--mode", choices=["all", "desktop", "pc", "mobile"], default=None,
                         help="Chọn chế độ chạy: desktop (pc), mobile hoặc all (cả hai)")
     parser.add_argument("--pc", "--desktop", dest="pc_flag", action="store_true",
@@ -524,7 +717,55 @@ def main():
                         help="Chỉ chạy tìm kiếm Mobile")
     args, _ = parser.parse_known_args()
 
-    # Xác định chế độ chạy
+    config = load_config()
+    profiles = config.get("profiles", [])
+    if not profiles:
+        default_p = config.get("browser_settings", {}).get("profile_directory_path", "./edge_profile")
+        profiles = [
+            {"id": "1", "name": "Tài khoản 1 (Chính)", "path": default_p},
+            {"id": "2", "name": "Tài khoản 2 (Phụ)", "path": "./edge_profile_2"}
+        ]
+
+    # 1. Xác định profile cần chạy
+    selected_profiles = []
+    if args.profile:
+        p_arg = str(args.profile).strip().lower()
+        if p_arg in ["all", "both", "tatca", "ca2", "3"]:
+            selected_profiles = profiles
+        else:
+            # Khớp theo id hoặc tên
+            matched = [p for p in profiles if str(p.get("id", "")).lower() == p_arg or p.get("name", "").lower() == p_arg]
+            if matched:
+                selected_profiles = [matched[0]]
+            elif p_arg.isdigit() and 1 <= int(p_arg) <= len(profiles):
+                selected_profiles = [profiles[int(p_arg) - 1]]
+            else:
+                print(f"[!] Không nhận diện được profile '{args.profile}', dùng mặc định Profile 1.")
+                selected_profiles = [profiles[0]]
+    else:
+        # Hiển thị menu chọn Profile
+        print("""
+====================================================================
+          MICROSOFT REWARDS AUTO SEARCH BOT (EDGE)
+             Phiên bản Anti-Ban & Đa Tài Khoản
+====================================================================
+👉 BƯỚC 1: CHỌN TÀI KHOẢN / PROFILE TÌM KIẾM:""")
+        for idx, p in enumerate(profiles, 1):
+            p_name = p.get("name", f"Profile {p.get('id', idx)}")
+            p_path = p.get("path", "")
+            print(f"   [{idx}] {p_name} ({p_path})")
+        all_idx = len(profiles) + 1
+        print(f"   [{all_idx}] Chạy lần lượt TẤT CẢ các tài khoản trên")
+        print("====================================================================")
+        p_choice = input(f"Nhập lựa chọn tài khoản (1-{all_idx}) [Mặc định: 1]: ").strip()
+        if p_choice == str(all_idx) or p_choice.lower() in ["all", "both", "tatca", "ca2"]:
+            selected_profiles = profiles
+        elif p_choice.isdigit() and 1 <= int(p_choice) <= len(profiles):
+            selected_profiles = [profiles[int(p_choice) - 1]]
+        else:
+            selected_profiles = [profiles[0]]
+
+    # 2. Xác định chế độ chạy (Mode)
     if args.pc_flag or (args.mode in ["desktop", "pc"]):
         selected_mode = "desktop"
     elif args.mobile_flag or (args.mode == "mobile"):
@@ -532,13 +773,10 @@ def main():
     elif args.mode == "all":
         selected_mode = "all"
     else:
-        # Nếu chạy trực tiếp không truyền tham số -> Hiển thị menu lựa chọn
+        # Nếu chưa truyền tham số mode -> Hiển thị menu lựa chọn
         print("""
 ====================================================================
-          MICROSOFT REWARDS AUTO SEARCH BOT (EDGE)
-             Phiên bản Anti-Ban & Human Mimicking
-====================================================================
-👉 CHỌN CHẾ ĐỘ TÌM KIẾM BẠN MUỐN:
+👉 BƯỚC 2: CHỌN CHẾ ĐỘ TÌM KIẾM BẠN MUỐN:
    [1] Chỉ tìm kiếm Desktop / PC (Khuyên dùng chạy buổi sáng/trưa)
    [2] Chỉ tìm kiếm Mobile        (Khuyên dùng chạy buổi chiều/tối)
    [3] Chạy cả hai (Desktop rồi Mobile)
@@ -552,98 +790,47 @@ def main():
         else:
             selected_mode = "desktop"
 
-    run_pc = selected_mode in ["all", "desktop"]
-    run_mobile = selected_mode in ["all", "mobile"]
+    # Nạp danh sách từ khóa gốc
+    raw_keywords = load_keywords()
+    print(f"\n[✓] Đã nạp thành công kho {len(raw_keywords)} từ khóa tìm kiếm tự nhiên.")
 
-    config = load_config()
-    search_cfg = config.get("search_settings", {})
-    pc_count = search_cfg.get("pc_searches", 31) if run_pc else 0
-    mobile_count = search_cfg.get("mobile_searches", 21) if run_mobile else 0
-    device_name = config.get("browser_settings", {}).get("mobile_device_name", "Pixel 7")
-    profile_dir = get_profile_abs_path(config)
+    session_results = []
+    overall_start = datetime.now()
+
+    for p_idx, current_profile in enumerate(selected_profiles):
+        p_name = current_profile.get("name", f"Profile {current_profile.get('id', p_idx+1)}")
+        if len(selected_profiles) > 1:
+            print("\n" + "#" * 66)
+            print(f"### [TIẾN TRÌNH] BẮT ĐẦU TÀI KHOẢN {p_idx + 1}/{len(selected_profiles)}: {p_name}")
+            print("#" * 66)
+
+        res = run_profile_session(current_profile, selected_mode, config, keywords_pool=raw_keywords)
+        session_results.append(res)
+
+        # Nghỉ giữa các profile nếu chạy nhiều profile
+        if p_idx < len(selected_profiles) - 1:
+            inter_profile_pause = random.uniform(10, 18)
+            print(f"\n{'='*66}")
+            print(f"⏳ Đã xong {p_name}. Tạm dừng an toàn {inter_profile_pause:.1f}s trước khi chuyển sang tài khoản tiếp theo...")
+            print(f"{'='*66}\n")
+            time.sleep(inter_profile_pause)
+
+    # ==========================
+    # TỔNG KẾT TOÀN BỘ PHIÊN
+    # ==========================
+    overall_duration = datetime.now() - overall_start
+    total_mins, total_secs = divmod(int(overall_duration.total_seconds()), 60)
+    total_searches_done = sum(r["searches"] for r in session_results)
 
     print("\n" + "=" * 66)
-    print("🚀 BẮT ĐẦU PHIÊN CHẠY BOT MICROSOFT REWARDS")
-    print(f"[*] Chế độ đang chạy: {selected_mode.upper()}")
-    print(f"[*] Thư mục Profile : {profile_dir}")
-    print(f"[*] Kế hoạch chạy chi tiết:")
-    if run_pc:
-        print(f"   - Desktop (PC)        : {pc_count} lượt tìm kiếm")
-    if run_mobile:
-        print(f"   - Mobile (Android)    : {mobile_count} lượt (Thiết bị: {device_name})")
-    print(f"   - Giãn cách an toàn   : {search_cfg.get('min_delay_seconds')}s - {search_cfg.get('max_delay_seconds')}s / lượt")
-    print(f"   - Chế độ Cooldown     : {'BẬT (Mỗi ' + str(search_cfg.get('batch_size', 4)) + ' lượt nghỉ ' + str(search_cfg.get('batch_cooldown_minutes', 5)) + ' phút)' if search_cfg.get('enable_cooldown_batches') else 'TẮT'}")
-    print(f"   - Click đọc bài (CTR) : {int(search_cfg.get('random_click_chance', 0.25) * 100)}% ngẫu nhiên")
-    print(f"   - Rê chuột tự nhiên   : {'BẬT' if search_cfg.get('enable_mouse_movement', True) else 'TẮT'}")
-    print("=" * 66)
-
-    # Nạp từ khóa
-    keywords = load_keywords()
-    print(f"[✓] Đã nạp thành công {len(keywords)} từ khóa tìm kiếm tự nhiên.")
-
-    total_searches_done = 0
-    start_time = datetime.now()
-
-    # ==========================
-    # PHẦN 1: TÌM KIẾM DESKTOP (PC)
-    # ==========================
-    if run_pc and pc_count > 0:
-        print("\n🖥️  [1] Đang khởi động Microsoft Edge ở chế độ Desktop (PC)...")
-        pc_driver = None
-        try:
-            pc_driver = create_edge_driver(is_mobile=False, config=config)
-            check_and_prompt_first_time_login(pc_driver)
-            searches_pc = execute_search_session(pc_driver, keywords, pc_count, mode_name="PC", config=config)
-            total_searches_done += searches_pc
-        except Exception as e:
-            print(f"[!] Lỗi trong phiên tìm kiếm PC: {e}")
-        finally:
-            if pc_driver:
-                print("[*] Đang đóng phiên duyệt Desktop...")
-                try:
-                    pc_driver.quit()
-                except Exception:
-                    pass
-
-        # Nếu chạy cả hai chế độ thì tạm nghỉ giữa 2 phiên
-        if run_mobile and mobile_count > 0:
-            transition_pause = random.uniform(8, 15)
-            print(f"\n[⏳] Tạm nghỉ {transition_pause:.1f}s trước khi chuyển sang chế độ Mobile...")
-            time.sleep(transition_pause)
-
-    # ==========================
-    # PHẦN 2: TÌM KIẾM MOBILE
-    # ==========================
-    if run_mobile and mobile_count > 0:
-        step_label = "[2]" if run_pc else "[1]"
-        print(f"\n📱 {step_label} Đang khởi động Microsoft Edge ở chế độ Mobile (Giả lập {device_name})...")
-        mobile_driver = None
-        try:
-            mobile_driver = create_edge_driver(is_mobile=True, config=config)
-            searches_mob = execute_search_session(mobile_driver, keywords, mobile_count, mode_name="MOBILE", config=config)
-            total_searches_done += searches_mob
-        except Exception as e:
-            print(f"[!] Lỗi trong phiên tìm kiếm Mobile: {e}")
-        finally:
-            if mobile_driver:
-                print("[*] Đang đóng phiên duyệt Mobile...")
-                try:
-                    mobile_driver.quit()
-                except Exception:
-                    pass
-
-    # ==========================
-    # TỔNG KẾT
-    # ==========================
-    duration = datetime.now() - start_time
-    minutes, seconds = divmod(int(duration.total_seconds()), 60)
-
-    print("\n" + "=" * 66)
-    print("🎉 PHIÊN TÌM KIẾM ĐÃ HOÀN TẤT!")
-    print(f"   - Chế độ đã chạy                  : {selected_mode.upper()}")
-    print(f"   - Tổng số lượt tìm kiếm hoàn thành: {total_searches_done}")
-    print(f"   - Tổng thời gian chạy             : {minutes} phút {seconds} giây")
-    print(f"   - Điểm Rewards ước tính kiếm được : ~{total_searches_done * 3} điểm")
+    print("🎉 TẤT CẢ CÁC PHIÊN TÌM KIẾM ĐÃ HOÀN TẤT!")
+    print(f"   - Chế độ tìm kiếm                  : {selected_mode.upper()}")
+    print(f"   - Số tài khoản đã chạy             : {len(session_results)}")
+    for r in session_results:
+        print(f"     • {r['profile_name']}: {r['searches']} lượt search (~{r['searches'] * 3} điểm)")
+    print(f"   - Tổng số lượt tìm kiếm hoàn thành : {total_searches_done}")
+    print(f"   - Tổng thời gian chạy              : {total_mins} phút {total_secs} giây")
+    print(f"   - Tổng điểm Rewards ước tính       : ~{total_searches_done * 3} điểm")
     print("=" * 66)
     print("Bạn có thể mở Microsoft Edge để kiểm tra số điểm Rewards được cộng!")
     input("\nNhấn phím ENTER để kết thúc chương trình...")

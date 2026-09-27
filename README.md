@@ -16,9 +16,9 @@ Tool Python tự động hóa tìm kiếm trên **Microsoft Edge** để cày tr
    - **Chế độ PC (Desktop)**: Thực hiện các lượt tìm kiếm máy tính thông thường.
    - **Chế độ Mobile (Giả lập iPhone)**: Tự động đổi User-Agent và kích thước màn hình sang iPhone/Android để nhận trọn điểm tìm kiếm di động.
 
-3. **Sử dụng trực tiếp Profile Edge thật**:
-   - Sử dụng đúng Profile hiện tại của bạn (`User Data/Default`), không cần nhập lại mật khẩu hay mã OTP.
-   - Có cơ chế cảnh báo hoặc tự đóng Edge đang chạy để tránh lỗi khóa dữ liệu (file lock).
+3. **Hỗ trợ đa Profile / Đa tài khoản**:
+   - Quản lý độc lập các tài khoản (ví dụ Profile 1 và Profile 2), mỗi tài khoản có phiên làm việc riêng biệt (`./edge_profile` và `./edge_profile_2`), không lo bị xung đột cookie hay đăng xuất.
+   - Hỗ trợ chọn chạy riêng từng tài khoản hoặc tự động chạy tuần tự cả 2 tài khoản trong 1 lần bấm!
 
 4. **Kho từ khóa phong phú**:
    - Hơn 150 từ khóa tìm kiếm thực tế (tiếng Việt và tiếng Anh) thuộc các chủ đề: thời sự, công nghệ, nấu ăn, du lịch, đời sống...
@@ -30,10 +30,12 @@ Tool Python tự động hóa tìm kiếm trên **Microsoft Edge** để cày tr
 
 ```
 auto_microsoft/
-├── config.json              # File cấu hình (số lượt search, delay, cooldown...)
+├── config.json              # File cấu hình (danh sách profiles, số lượt search, delay, cooldown...)
 ├── keywords.txt             # Danh sách các từ khóa tìm kiếm thực tế
-├── edge_rewards_bot.py      # File mã nguồn Python chính
-├── run_bot.bat              # File click đúp chạy nhanh trên Windows
+├── edge_rewards_bot.py      # File mã nguồn Python chính (hỗ trợ --profile và --mode)
+├── run_bot.bat              # Menu chọn tài khoản và chế độ nhanh
+├── run_pc.bat               # Chạy nhanh chế độ PC với lựa chọn profile
+├── run_mobile.bat           # Chạy nhanh chế độ Mobile với lựa chọn profile
 └── README.md                # Hướng dẫn chi tiết
 ```
 
@@ -43,15 +45,28 @@ auto_microsoft/
 
 ### Cách 1: Chạy nhanh bằng 1 cú click (Khuyên dùng)
 - Click đúp chuột vào file **`run_bot.bat`**.
-- Nếu Microsoft Edge đang mở, tool sẽ hỏi bạn có muốn đóng Edge không (`y/n`). Nhấn **`y`** (hoặc Enter) để tool đóng Edge và bắt đầu chạy.
+- Chọn tài khoản muốn chạy:
+  - `[1]`: Profile 1 (Tài khoản 1)
+  - `[2]`: Profile 2 (Tài khoản 2)
+  - `[3]`: Chạy lần lượt cả 2 Profile
+- Chọn chế độ tìm kiếm:
+  - `[1]`: Desktop (PC)
+  - `[2]`: Mobile
+  - `[3]`: Cả hai (Desktop rồi Mobile)
 
 ### Cách 2: Chạy bằng dòng lệnh Terminal
 ```powershell
-# Chuyển vào thư mục tool
-cd d:\Hoc_Tap\file_vs_code\DoAn_TTTN\auto_microsoft
-
-# Chạy script
+# Chạy tương tác (menu hỏi chọn Profile và Mode)
 python edge_rewards_bot.py
+
+# Chạy cụ thể Profile 1 với chế độ Desktop
+python edge_rewards_bot.py --profile 1 --mode desktop
+
+# Chạy Profile 2 với cả hai chế độ
+python edge_rewards_bot.py --profile 2 --mode all
+
+# Chạy tự động lần lượt cả 2 tài khoản
+python edge_rewards_bot.py --profile all --mode all
 ```
 
 ---
@@ -63,24 +78,36 @@ Bạn có thể mở file `config.json` bằng bất kỳ trình soạn thảo n
 ```json
 {
   "search_settings": {
-    "pc_searches": 32,                 // Số lượt tìm kiếm PC (Level 2 thường cần 30 lượt = 90 điểm)
-    "mobile_searches": 22,             // Số lượt tìm kiếm Mobile (Level 2 thường cần 20 lượt = 60 điểm)
-    "min_delay_seconds": 10,           // Độ trễ tối thiểu giữa các lượt tìm kiếm (giây)
-    "max_delay_seconds": 20,           // Độ trễ tối đa giữa các lượt tìm kiếm (giây)
-    "enable_cooldown_batches": false,  // Bật/tắt chế độ ngắt quãng an toàn (mặc định tắt)
+    "pc_searches": 31,                 // Số lượt tìm kiếm PC
+    "mobile_searches": 21,             // Số lượt tìm kiếm Mobile
+    "min_delay_seconds": 12,           // Độ trễ tối thiểu giữa các lượt tìm kiếm (giây)
+    "max_delay_seconds": 22,           // Độ trễ tối đa giữa các lượt tìm kiếm (giây)
+    "enable_cooldown_batches": true,   // Bật/tắt chế độ ngắt quãng an toàn
     "batch_size": 4,                   // Cứ mỗi 4 lượt tìm kiếm...
-    "batch_cooldown_minutes": 15,      // ...thì nghỉ 15 phút (nếu tài khoản của bạn bị giới hạn cooldown)
+    "batch_cooldown_minutes": 5,       // ...thì nghỉ 5-15 phút (nếu tài khoản bị cooldown)
     "enable_smooth_scrolling": true,   // Bật cuộn trang mô phỏng đọc bài
-    "human_typing_speed_min": 0.08,    // Tốc độ gõ phím nhỏ nhất (giây/phím)
-    "human_typing_speed_max": 0.20     // Tốc độ gõ phím lớn nhất (giây/phím)
+    "enable_mouse_movement": true,     // Bật rê chuột ngẫu nhiên
+    "random_click_chance": 0.25,       // Tỷ lệ click vào đọc kết quả tự nhiên (CTR)
+    "human_typing_speed_min": 0.04,    // Tốc độ gõ phím nhỏ nhất (giây/phím)
+    "human_typing_speed_max": 0.10     // Tốc độ gõ phím lớn nhất (giây/phím)
   },
   "browser_settings": {
-    "use_system_edge_profile": true,   // Dùng Profile Edge của máy (không cần login lại)
-    "user_data_path": "auto",          // Tự động nhận diện đường dẫn Profile
-    "profile_directory": "Default",    // Tên profile (Default là tài khoản chính)
+    "profile_directory_path": "./edge_profile",
     "headless": false,                 // Hiện cửa sổ duyệt web để theo dõi trực quan
-    "mobile_device_name": "iPhone 12 Pro" // Thiết bị giả lập khi search Mobile
-  }
+    "mobile_device_name": "Pixel 7"    // Thiết bị giả lập khi search Mobile
+  },
+  "profiles": [
+    {
+      "id": "1",
+      "name": "Tài khoản 1 (Chính)",
+      "path": "./edge_profile"
+    },
+    {
+      "id": "2",
+      "name": "Tài khoản 2 (Phụ)",
+      "path": "./edge_profile_2"
+    }
+  ]
 }
 ```
 

@@ -33,18 +33,33 @@ BƯỚC 2: CHẠY TOOL LẦN ĐẦU TIÊN
    - Bot có gõ từng chữ, cuộn trang đọc kết quả và nghỉ ngơi giống y hệt người thật.
 
 --------------------------------------------------------------------------------
-BƯỚC 3: CÁCH DÙNG HÀNG NGÀY (TỪ LẦN THỨ 2 TRỞ ĐI)
+BƯỚC 3: CÁCH DÙNG HÀNG NGÀY & QUẢN LÝ 2 PROFILE (2 TÀI KHOẢN)
 --------------------------------------------------------------------------------
-- Tài khoản của bạn đã được lưu vĩnh viễn, KHÔNG CẦN ĐĂNG NHẬP LẠI NỮA!
-- Mỗi ngày bạn chỉ cần nhấp đúp chuột vào file: [run_bot.bat]
-- Ngồi uống cà phê chờ vài phút là xong toàn bộ điểm thưởng trong ngày!
-- Bạn vẫn có thể mở Microsoft Edge bình thường để làm việc, lướt web mà không hề bị ảnh hưởng hay xung đột.
+- Tool hỗ trợ quản lý độc lập 2 tài khoản (Profile 1 và Profile 2).
+  Mỗi tài khoản lưu phiên đăng nhập riêng biệt, không bị xung đột hay đăng xuất!
+
+- Mỗi ngày bạn nhấp đúp chuột vào file: [run_bot.bat]
+  1. Chọn Tài khoản:
+     [1] Profile 1 (Tài khoản 1)
+     [2] Profile 2 (Tài khoản 2)
+     [3] Chạy cả 2 Profile (Bot chạy xong Acc 1 rồi tự chuyển sang Acc 2)
+  2. Chọn Chế độ:
+     [1] Desktop (PC)
+     [2] Mobile
+     [3] Cả hai (Desktop rồi Mobile)
+
+* LƯU Ý KHI ĐĂNG NHẬP PROFILE 2 LẦN ĐẦU TIÊN:
+- Khi bạn chọn chạy Profile 2 lần đầu tiên, cửa sổ Edge của Profile 2 sẽ mở ra.
+- Bạn bấm "Sign In" đăng nhập tài khoản Microsoft thứ 2 vào Edge.
+- Đăng nhập xong, quay lại cửa sổ dòng lệnh nhấn phím ENTER.
+- Từ những lần sau, Profile 2 cũng sẽ được lưu vĩnh viễn, không cần đăng nhập lại nữa!
 
 --------------------------------------------------------------------------------
 TÙY CHỈNH (NẾU CẦN):
 --------------------------------------------------------------------------------
 Mở file [config.json] bằng Notepad để chỉnh:
-- "pc_searches": số lượt tìm kiếm PC (mặc định 32).
-- "mobile_searches": số lượt tìm kiếm Mobile (mặc định 22).
+- "profiles": Danh sách các tài khoản (bạn có thể đổi tên hiển thị cho dễ nhớ).
+- "pc_searches": số lượt tìm kiếm PC (mặc định 31).
+- "mobile_searches": số lượt tìm kiếm Mobile (mặc định 21).
 - "min_delay_seconds" & "max_delay_seconds": thời gian nghỉ giữa các lần tìm kiếm.
 ================================================================================

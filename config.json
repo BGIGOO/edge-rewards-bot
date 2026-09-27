@@ -17,5 +17,19 @@
     "profile_directory_path": "./edge_profile",
     "headless": false,
     "mobile_device_name": "Pixel 7"
-  }
+  },
+  "profiles": [
+    {
+      "id": "1",
+      "name": "Profile 1 (manhnguyen1745@gmail.com)",
+      "path": "./edge_profile",
+      "profile_directory": "Default"
+    },
+    {
+      "id": "2",
+      "name": "Profile 2 (manhnguyen1768@gmail.com)",
+      "path": "./edge_profile_2",
+      "profile_directory": "Profile 1"
+    }
+  ]
 }

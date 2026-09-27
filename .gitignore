@@ -1,6 +1,9 @@
 # Profile Edge riêng chứa Cookie cá nhân (không đưa lên Git hay chia sẻ)
 edge_profile/
 edge_profile/*
+edge_profile_2/
+edge_profile_2/*
+edge_profile*
 
 # Python cache
 __pycache__/
