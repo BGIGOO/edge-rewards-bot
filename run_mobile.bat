@@ -24,7 +24,7 @@ echo --------------------------------------------------------------------
 set /p prof="Nhap lua chon tai khoan (1/2/3) [Mac dinh: 1]: "
 if "%prof%"=="" set prof=1
 
-python edge_rewards_bot.py --mode mobile --profile %prof%
+python -u edge_rewards_bot.py --mode mobile --profile %prof%
 
 if %ERRORLEVEL% neq 0 (
     echo.

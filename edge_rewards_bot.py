@@ -27,9 +27,9 @@ from datetime import datetime
 # Đảm bảo in tiếng Việt trên console Windows không bị lỗi UnicodeEncodeError
 try:
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
     if sys.stderr and hasattr(sys.stderr, "reconfigure"):
-        sys.stderr.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8", line_buffering=True)
 except Exception:
     pass
 
@@ -204,16 +204,63 @@ def sync_profile_from_system(profile):
             pass
 
 
+def kill_zombie_edge_processes(profile_dir=None):
+    """
+    Tự động quét và đóng các tiến trình msedge.exe hoặc msedgedriver.exe chạy ngầm
+    đang khóa thư mục profile_dir của bot (tránh lỗi xung đột lock file code 32).
+    Tuyệt đối không ảnh hưởng đến trình duyệt Edge cá nhân của người dùng.
+    """
+    try:
+        # 1. Đóng msedgedriver mồ côi (nếu có từ phiên trước)
+        subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+             "Get-CimInstance Win32_Process -Filter \"Name = 'msedgedriver.exe'\" | Stop-Process -Force -ErrorAction SilentlyContinue"],
+            capture_output=True,
+            timeout=5
+        )
+
+        # 2. Đóng các tiến trình msedge đang chạy với profile_dir này
+        if profile_dir:
+            norm_dir_win = os.path.abspath(profile_dir).replace("/", "\\")
+            norm_dir_fwd = os.path.abspath(profile_dir).replace("\\", "/")
+            folder_name = os.path.basename(os.path.normpath(profile_dir))
+
+            ps_script = (
+                f"$procs = Get-CimInstance Win32_Process -Filter \"Name = 'msedge.exe'\" | "
+                f"Where-Object {{ $_.CommandLine -like '*{folder_name}*' -or $_.CommandLine -like '*{norm_dir_win}*' -or $_.CommandLine -like '*{norm_dir_fwd}*' }}; "
+                f"foreach ($p in $procs) {{ Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }}"
+            )
+            subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+                capture_output=True,
+                timeout=8
+            )
+
+            # Xóa file cổng giao tiếp tạm nếu còn sót lại từ lần tắt đột ngột trước
+            port_file = os.path.join(norm_dir_win, "DevToolsActivePort")
+            if os.path.exists(port_file):
+                try:
+                    os.remove(port_file)
+                except Exception:
+                    pass
+            time.sleep(1)
+    except Exception:
+        pass
+
+
 def create_edge_driver(is_mobile=False, config=None, profile_target=None):
     """Khởi tạo trình duyệt Edge với profile riêng biệt chống xung đột và chống phát hiện bot"""
     options = EdgeOptions()
     browser_cfg = config.get("browser_settings", {}) if config else {}
     target_prof = profile_target if profile_target is not None else config
 
+    profile_dir = get_profile_abs_path(target_prof)
+
+    # Đảm bảo giải phóng mọi tiến trình Edge treo cũ đang chiếm dụng profile này trước khi khởi động
+    kill_zombie_edge_processes(profile_dir)
+
     # Tự động đồng bộ session từ Edge nếu cần
     sync_profile_from_system(target_prof)
-
-    profile_dir = get_profile_abs_path(target_prof)
 
     # 1. Đường dẫn Profile riêng biệt
     options.add_argument(f"--user-data-dir={profile_dir}")
@@ -228,6 +275,8 @@ def create_edge_driver(is_mobile=False, config=None, profile_target=None):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-infobars")
+    options.add_argument("--no-first-run")
+    options.add_argument("--no-default-browser-check")
     options.add_argument("--lang=vi-VN,vi,en-US,en")
     
     if browser_cfg.get("headless", False):
@@ -241,13 +290,24 @@ def create_edge_driver(is_mobile=False, config=None, profile_target=None):
     else:
         options.add_argument("--start-maximized")
 
-    # Khởi tạo Driver (dùng webdriver-manager để tự động tìm/tải đúng msedgedriver)
-    try:
-        service = EdgeService(EdgeChromiumDriverManager().install())
-        driver = webdriver.Edge(service=service, options=options)
-    except Exception as e_mgr:
-        print(f"[!] webdriver-manager thất bại ({e_mgr}), thử khởi động trực tiếp...")
-        driver = webdriver.Edge(options=options)
+    # Khởi tạo Driver với cơ chế tự phục hồi (Self-Healing Retry nếu gặp tiến trình treo)
+    driver = None
+    for attempt in range(2):
+        try:
+            service = EdgeService(EdgeChromiumDriverManager().install())
+            driver = webdriver.Edge(service=service, options=options)
+            break
+        except Exception as e_mgr:
+            try:
+                driver = webdriver.Edge(options=options)
+                break
+            except Exception as e_direct:
+                if attempt == 0:
+                    print(f"[!] Profile đang bị khóa bởi tiến trình trước, đang tự động giải phóng và thử lại...")
+                    kill_zombie_edge_processes(profile_dir)
+                    time.sleep(1.5)
+                else:
+                    raise e_direct
 
     # 4. Tiêm script xóa cờ navigator.webdriver và giả lập runtime (Stealth Mode)
     try:
@@ -664,7 +724,8 @@ def run_profile_session(profile, selected_mode, config, keywords_pool=None):
                     pc_driver.quit()
                 except Exception:
                     pass
-                time.sleep(2)
+                time.sleep(1)
+                kill_zombie_edge_processes(profile_dir)
 
         # Nếu chạy cả hai chế độ thì tạm nghỉ giữa 2 phiên
         if run_mobile and mobile_count > 0:
@@ -693,7 +754,8 @@ def run_profile_session(profile, selected_mode, config, keywords_pool=None):
                     mobile_driver.quit()
                 except Exception:
                     pass
-                time.sleep(2)
+                time.sleep(1)
+                kill_zombie_edge_processes(profile_dir)
 
     duration = datetime.now() - start_time
     minutes, seconds = divmod(int(duration.total_seconds()), 60)
@@ -841,4 +903,11 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\n\n[!] Người dùng đã dừng chương trình bằng Ctrl+C.")
+        try:
+            default_p = os.path.abspath(os.path.join(SCRIPT_DIR, "edge_profile"))
+            default_p2 = os.path.abspath(os.path.join(SCRIPT_DIR, "edge_profile_2"))
+            kill_zombie_edge_processes(default_p)
+            kill_zombie_edge_processes(default_p2)
+        except Exception:
+            pass
         sys.exit(0)

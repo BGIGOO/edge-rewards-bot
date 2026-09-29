@@ -42,7 +42,7 @@ if "%choice%"=="2" (
     set selected_mode=desktop
 )
 
-python edge_rewards_bot.py --profile %prof% --mode %selected_mode%
+python -u edge_rewards_bot.py --profile %prof% --mode %selected_mode%
 
 if %ERRORLEVEL% neq 0 (
     echo.
