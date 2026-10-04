@@ -15,6 +15,7 @@ let appState = {
 // DOM References
 const profilesGrid = document.getElementById("profilesGrid");
 const profileCountDisplay = document.getElementById("profileCountDisplay");
+const profilesBadge = document.getElementById("profilesBadge");
 const connectionStatus = document.getElementById("connectionStatus");
 const connStatusText = document.getElementById("connStatusText");
 const botStatusPill = document.getElementById("botStatusPill");
@@ -25,6 +26,15 @@ const activeAccountNotice = document.getElementById("activeAccountNotice");
 const kpiEngineStatus = document.getElementById("kpiEngineStatus");
 const kpiEngineSub = document.getElementById("kpiEngineSub");
 const logCounter = document.getElementById("logCounter");
+
+// Bottom Resizable Terminal DOM References
+const terminalSection = document.getElementById("terminalSection");
+const terminalResizer = document.getElementById("terminalResizer");
+const terminalCollapsedPreview = document.getElementById("terminalCollapsedPreview");
+const previewText = document.getElementById("previewText");
+const btnCollapseTerminal = document.getElementById("btnCollapseTerminal");
+const btnNormalTerminal = document.getElementById("btnNormalTerminal");
+const btnMaximizeTerminal = document.getElementById("btnMaximizeTerminal");
 
 // Action Hub Buttons
 const btnRunAllFull = document.getElementById("btnRunAllFull");
@@ -59,6 +69,7 @@ const btnSeedKeywords = document.getElementById("btnSeedKeywords");
 // INITIALIZATION
 // ====================================================================
 document.addEventListener("DOMContentLoaded", () => {
+  initTerminalControls();
   initWebSocket();
   loadProfiles();
   loadStatus();
@@ -138,6 +149,11 @@ function appendLogLine(entry) {
   lineDiv.appendChild(timeSpan);
   lineDiv.appendChild(textSpan);
 
+  if (previewText) {
+    previewText.innerText = entry.text || "";
+    previewText.className = `preview-text preview-${entry.type || "info"}`;
+  }
+
   terminalLogBody.appendChild(lineDiv);
 
   // Buffer retention: Keep last 600 lines
@@ -175,6 +191,9 @@ function renderProfiles(profiles) {
   if (profileCountDisplay) {
     profileCountDisplay.innerText = profiles.length;
   }
+  if (profilesBadge) {
+    profilesBadge.innerText = `${profiles.length} PROFILES`;
+  }
 
   if (!profiles || profiles.length === 0) {
     profilesGrid.innerHTML = `
@@ -187,24 +206,53 @@ function renderProfiles(profiles) {
 
   profilesGrid.innerHTML = "";
 
-  // Memphis Rotational Color Palettes for Account Badges
-  const avatarColors = ["#DDD6FE", "#FBCFE8", "#FEF08A", "#A7F3D0"];
-  const avatarTextColors = ["#6D28D9", "#BE185D", "#854D0E", "#065F46"];
+  // Hand-Drawn Post-It & Marker Color Palettes for Account Badges
+  const avatarColors = ["#fef08a", "#fbcfe8", "#d1fae5", "#bae6fd"];
+  const avatarTextColors = ["#854d0e", "#9d174d", "#065f46", "#0369a1"];
 
   profiles.forEach((p, idx) => {
-    const isCurrentActive = appState.isRunning && appState.currentTask && String(appState.currentTask.profile_id) === String(p.id);
+    const isThisRunning = appState.isRunning && appState.currentTask && String(appState.currentTask.profile_id) === String(p.id);
     const card = document.createElement("div");
-    card.className = `profile-sticker-card ${isCurrentActive ? "running" : ""}`;
+    card.className = `profile-sticker-card ${isThisRunning ? "running" : ""}`;
     card.id = `profile-card-${p.id}`;
 
-    const statusClass = isCurrentActive ? "status-running" : "status-ready";
-    const statusText = isCurrentActive ? "RUNNING" : "READY";
+    const statusClass = isThisRunning ? "status-running" : "status-ready";
+    const statusText = isThisRunning ? "ĐANG TÌM KIẾM" : "SẴN SÀNG";
 
     const colIdx = idx % 4;
-    const bgCol = avatarColors[colIdx] || "#DDD6FE";
-    const txtCol = avatarTextColors[colIdx] || "#6D28D9";
+    const bgCol = avatarColors[colIdx] || "#fef08a";
+    const txtCol = avatarTextColors[colIdx] || "#854d0e";
+
+    // Action segments: If this profile is running, show prominent "🛑 DỪNG TÌM KIẾM" button!
+    let segmentsHtml = "";
+    if (isThisRunning) {
+      segmentsHtml = `
+        <div class="card-run-segments running-mode">
+          <button class="btn btn-stop-running-task" onclick="stopProfile('${p.id}')" title="Dừng ngay lượt tìm kiếm của tài khoản này">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
+            <span>🛑 DỪNG TÌM KIẾM (ACC #${p.id})</span>
+          </button>
+        </div>
+      `;
+    } else {
+      const isOtherRunning = appState.isRunning;
+      segmentsHtml = `
+        <div class="card-run-segments">
+          <button class="btn btn-segment" onclick="runSingleProfile('${p.id}', 'desktop')" ${isOtherRunning ? "disabled" : ""} title="Tìm kiếm Desktop (31 lượt)">
+            🖥️ PC (31)
+          </button>
+          <button class="btn btn-segment" onclick="runSingleProfile('${p.id}', 'mobile')" ${isOtherRunning ? "disabled" : ""} title="Tìm kiếm Mobile (21 lượt)">
+            📱 Mob (21)
+          </button>
+          <button class="btn btn-segment btn-segment-full" onclick="runSingleProfile('${p.id}', 'all')" ${isOtherRunning ? "disabled" : ""} title="Chạy cả Desktop và Mobile">
+            ⚡ Full (52)
+          </button>
+        </div>
+      `;
+    }
 
     card.innerHTML = `
+      <div class="tape-strip"></div>
       <div class="card-identity-row">
         <div class="identity-left">
           <div class="profile-avatar-pill" style="background-color: ${bgCol}; color: ${txtCol};">#${p.id}</div>
@@ -216,22 +264,15 @@ function renderProfiles(profiles) {
         <span class="card-status-pill ${statusClass}">${statusText}</span>
       </div>
 
-      <div class="card-run-segments">
-        <button class="btn btn-segment" onclick="runSingleProfile('${p.id}', 'desktop')" ${appState.isRunning ? "disabled" : ""} title="Tìm kiếm Desktop (31 lượt)">
-          🖥️ PC (31)
-        </button>
-        <button class="btn btn-segment" onclick="runSingleProfile('${p.id}', 'mobile')" ${appState.isRunning ? "disabled" : ""} title="Tìm kiếm Mobile (21 lượt)">
-          📱 Mob (21)
-        </button>
-        <button class="btn btn-segment btn-segment-full" onclick="runSingleProfile('${p.id}', 'all')" ${appState.isRunning ? "disabled" : ""} title="Chạy cả Desktop và Mobile">
-          ⚡ Full (52)
-        </button>
-      </div>
+      ${segmentsHtml}
 
       <div class="card-utilities-row">
         <button class="btn btn-login-edge" onclick="loginProfile('${p.id}')" title="Mở Edge độc lập để đăng nhập tài khoản lần đầu hoặc kiểm tra điểm">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
           <span>🔑 Đăng Nhập Edge</span>
+        </button>
+        <button class="btn-icon-circle danger-subtle" onclick="stopProfile('${p.id}')" title="Dừng tìm kiếm hoặc đóng tiến trình Edge của tài khoản này">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
         </button>
         <button class="btn-icon-circle" onclick="unlockProfile('${p.id}')" title="Giải phóng file lock và đóng tiến trình treo nếu có">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-14 14l-2 2m18-18l-4 4m-10 10l-4 4m14-14l-2 2m-6 6l-2 2"></path></svg>
@@ -259,10 +300,20 @@ async function loadStatus() {
     if (!res.ok) return;
     const data = await res.json();
     
+    const wasRunning = appState.isRunning;
+    const prevTaskId = appState.currentTask?.profile_id;
+
     appState.isRunning = data.is_running;
     appState.currentTask = data.current_task;
 
     updateUIState();
+
+    // Nếu trạng thái hoạt động thay đổi, cập nhật ngay giao diện profile card để hiện/ẩn nút Dừng
+    if (wasRunning !== appState.isRunning || prevTaskId !== appState.currentTask?.profile_id) {
+      if (appState.profiles && appState.profiles.length > 0) {
+        renderProfiles(appState.profiles);
+      }
+    }
   } catch (err) {
     console.error("Lỗi lấy status:", err);
   }
@@ -275,7 +326,7 @@ function updateUIState() {
 
     if (kpiEngineStatus) {
       kpiEngineStatus.innerText = "RUNNING";
-      kpiEngineStatus.className = "kpi-number text-pink";
+      kpiEngineStatus.className = "chip-val text-pink";
     }
     if (kpiEngineSub) {
       kpiEngineSub.innerText = `ACC ${appState.currentTask.current_index}/${appState.currentTask.total_profiles}`;
@@ -294,7 +345,7 @@ function updateUIState() {
 
     if (kpiEngineStatus) {
       kpiEngineStatus.innerText = "READY";
-      kpiEngineStatus.className = "kpi-number text-mint";
+      kpiEngineStatus.className = "chip-val text-mint";
     }
     if (kpiEngineSub) {
       kpiEngineSub.innerText = "WAITING";
@@ -310,10 +361,31 @@ function updateUIState() {
   }
 
   // Update button states inside cards
-  const allCardButtons = profilesGrid.querySelectorAll("button:not(.btn-login-edge):not(.danger)");
-  allCardButtons.forEach(btn => {
+  const segmentButtons = profilesGrid.querySelectorAll(".btn-segment");
+  segmentButtons.forEach(btn => {
     btn.disabled = appState.isRunning;
   });
+}
+
+async function stopProfile(profileId) {
+  const profile = appState.profiles.find(p => String(p.id) === String(profileId));
+  const pName = profile ? profile.name : `Tài khoản #${profileId}`;
+
+  if (!confirm(`Xác nhận DỪNG tìm kiếm / đóng tiến trình Edge cho ${pName}?`)) {
+    return;
+  }
+
+  try {
+    let res = await fetch(`/api/profiles/${profileId}/stop`, { method: "POST" });
+    if (res.status === 404) {
+      res = await fetch("/api/stop", { method: "POST" });
+    }
+    await res.json();
+    loadStatus();
+    loadProfiles();
+  } catch (err) {
+    alert(`Lỗi khi dừng hồ sơ: ${err.message}`);
+  }
 }
 
 async function runTask(profileId, mode) {
@@ -617,6 +689,10 @@ btnClearLogs.addEventListener("click", async () => {
         <span class="log-content">Terminal log buffer cleared.</span>
       </div>`;
     if (logCounter) logCounter.innerText = "1 entries";
+    if (previewText) {
+      previewText.innerText = "Terminal log buffer cleared.";
+      previewText.className = "preview-text";
+    }
   } catch (err) {}
 });
 
@@ -637,6 +713,147 @@ btnDownloadLogs.addEventListener("click", () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 });
+
+
+// ====================================================================
+// TERMINAL RESIZING & SIZING MODES (Phóng to / Thu nhỏ / Kéo thả)
+// ====================================================================
+let terminalState = {
+  mode: localStorage.getItem("terminal_mode") || "normal", // "collapsed", "normal", "maximized", "custom"
+  customHeight: parseInt(localStorage.getItem("terminal_height")) || 280,
+  isDragging: false,
+  startY: 0,
+  startHeight: 0
+};
+
+function initTerminalControls() {
+  if (!terminalSection || !terminalResizer) return;
+
+  applyTerminalMode(terminalState.mode, terminalState.customHeight, false);
+
+  if (btnCollapseTerminal) {
+    btnCollapseTerminal.addEventListener("click", (e) => {
+      e.stopPropagation();
+      applyTerminalMode("collapsed");
+    });
+  }
+  if (btnNormalTerminal) {
+    btnNormalTerminal.addEventListener("click", (e) => {
+      e.stopPropagation();
+      applyTerminalMode("normal", 280);
+    });
+  }
+  if (btnMaximizeTerminal) {
+    btnMaximizeTerminal.addEventListener("click", (e) => {
+      e.stopPropagation();
+      applyTerminalMode("maximized", 560);
+    });
+  }
+
+  // Double click resizer or collapsed preview to toggle expand/collapse
+  terminalResizer.addEventListener("dblclick", () => {
+    if (terminalState.mode === "collapsed") {
+      applyTerminalMode("normal", 280);
+    } else {
+      applyTerminalMode("collapsed");
+    }
+  });
+
+  if (terminalCollapsedPreview) {
+    terminalCollapsedPreview.addEventListener("click", () => {
+      applyTerminalMode("normal", 280);
+    });
+  }
+
+  // Drag resizer
+  terminalResizer.addEventListener("mousedown", (e) => {
+    terminalState.isDragging = true;
+    terminalState.startY = e.clientY;
+    terminalState.startHeight = terminalSection.getBoundingClientRect().height;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+    terminalSection.classList.add("resizing");
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!terminalState.isDragging) return;
+    const deltaY = terminalState.startY - e.clientY; // dragging up increases height
+    let targetHeight = terminalState.startHeight + deltaY;
+
+    // Clamping: min 48px, max 750px
+    if (targetHeight < 80) {
+      applyTerminalMode("collapsed", 0, false);
+      return;
+    }
+    if (targetHeight > 750) targetHeight = 750;
+
+    terminalSection.classList.remove("collapsed");
+    if (terminalCollapsedPreview) terminalCollapsedPreview.classList.add("hidden");
+    terminalSection.style.height = `${targetHeight}px`;
+    terminalState.customHeight = targetHeight;
+    updateSizeButtons("custom");
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (terminalState.isDragging) {
+      terminalState.isDragging = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      terminalSection.classList.remove("resizing");
+
+      const finalHeight = terminalSection.getBoundingClientRect().height;
+      if (finalHeight > 80) {
+        localStorage.setItem("terminal_height", finalHeight);
+        localStorage.setItem("terminal_mode", "custom");
+        terminalState.mode = "custom";
+        terminalState.customHeight = finalHeight;
+      }
+    }
+  });
+}
+
+function applyTerminalMode(mode, customHeight = 280, save = true) {
+  if (!terminalSection) return;
+
+  terminalSection.classList.remove("collapsed", "normal-size", "maximized", "custom", "resizing");
+
+  if (mode === "collapsed") {
+    terminalSection.classList.add("collapsed");
+    terminalSection.style.height = "48px";
+    if (terminalCollapsedPreview) terminalCollapsedPreview.classList.remove("hidden");
+    updateSizeButtons("collapsed");
+  } else if (mode === "maximized") {
+    terminalSection.classList.add("maximized");
+    terminalSection.style.height = "560px";
+    if (terminalCollapsedPreview) terminalCollapsedPreview.classList.add("hidden");
+    updateSizeButtons("maximized");
+  } else if (mode === "custom" && customHeight >= 100) {
+    terminalSection.classList.add("custom");
+    terminalSection.style.height = `${customHeight}px`;
+    if (terminalCollapsedPreview) terminalCollapsedPreview.classList.add("hidden");
+    updateSizeButtons("custom");
+  } else {
+    // Normal / default mode (280px)
+    terminalSection.classList.add("normal-size");
+    terminalSection.style.height = "280px";
+    if (terminalCollapsedPreview) terminalCollapsedPreview.classList.add("hidden");
+    updateSizeButtons("normal");
+  }
+
+  terminalState.mode = mode;
+  if (save) {
+    localStorage.setItem("terminal_mode", mode);
+    if (mode === "custom" || mode === "normal" || mode === "maximized") {
+      localStorage.setItem("terminal_height", parseInt(terminalSection.style.height) || 280);
+    }
+  }
+}
+
+function updateSizeButtons(activeMode) {
+  if (btnCollapseTerminal) btnCollapseTerminal.classList.toggle("active", activeMode === "collapsed");
+  if (btnNormalTerminal) btnNormalTerminal.classList.toggle("active", activeMode === "normal");
+  if (btnMaximizeTerminal) btnMaximizeTerminal.classList.toggle("active", activeMode === "maximized");
+}
 
 
 // ====================================================================

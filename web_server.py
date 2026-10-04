@@ -369,6 +369,29 @@ async def stop_task(request):
     return JSONResponse({"status": "stopped"})
 
 
+async def stop_profile_task(request):
+    """Dừng tìm kiếm cho profile cụ thể"""
+    p_id = request.path_params.get("id")
+    cfg = load_config()
+    matched = [p for p in cfg.get("profiles", []) if str(p.get("id")) == str(p_id)]
+    p_name = matched[0].get("name", f"Profile {p_id}") if matched else f"Profile {p_id}"
+    
+    stopped = False
+    if task_mgr.is_running and task_mgr.current_task_info and str(task_mgr.current_task_info.get("profile_id")) == str(p_id):
+        task_mgr.stop_bot()
+        task_mgr.add_log(f"🛑 [DỪNG PROFILE] Đã dừng tìm kiếm cho {p_name}!", "warn")
+        stopped = True
+    else:
+        # Nếu profile này đang mở trình duyệt hoặc có tiến trình Edge treo
+        if matched:
+            p_dir = get_profile_abs_path(matched[0])
+            kill_zombie_edge_processes(p_dir)
+            task_mgr.add_log(f"🛑 [DỪNG PROFILE] Đã đóng tiến trình Edge của {p_name}.", "warn")
+            stopped = True
+
+    return JSONResponse({"status": "success", "stopped": stopped, "profile_id": p_id})
+
+
 async def get_config_endpoint(request):
     """Lấy cấu hình tìm kiếm và browser"""
     cfg = load_config()
@@ -460,6 +483,7 @@ routes = [
     Route("/api/profiles/{id}", delete_profile, methods=["DELETE"]),
     Route("/api/profiles/{id}/unlock", unlock_profile, methods=["POST"]),
     Route("/api/profiles/{id}/login", login_profile, methods=["POST"]),
+    Route("/api/profiles/{id}/stop", stop_profile_task, methods=["POST"]),
     Route("/api/run", run_task, methods=["POST"]),
     Route("/api/stop", stop_task, methods=["POST"]),
     Route("/api/config", get_config_endpoint, methods=["GET", "POST"]),

@@ -3,37 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rewards Pop Hub • Quản Lý 4+ Acc Microsoft Rewards</title>
-  <!-- Google Fonts: Outfit (Headings) + Plus Jakarta Sans (Body) + JetBrains Mono (Terminal) -->
+  <title>Rewards Sketch Hub • Quản Lý 4+ Acc Microsoft Rewards</title>
+  <!-- Google Fonts: Kalam (Headings / Felt Marker) + Patrick Hand (Body / Handwritten) + JetBrains Mono (Terminal) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Kalam:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <!-- Playful Background Shapes (Memphis Decors) -->
-  <div class="memphis-shape shape-circle"></div>
-  <div class="memphis-shape shape-square"></div>
-  <div class="memphis-shape shape-pill"></div>
-  <div class="memphis-shape shape-triangle"></div>
+  <!-- Hand-Drawn Paper Sticky Notes in Background -->
+  <div class="sketch-pin-note note-left">
+    <span class="thumbtack"></span>
+    <span class="note-text">✏️ 4 Profiles Độc Lập</span>
+  </div>
+  <div class="sketch-pin-note note-right">
+    <span class="tape-strip"></span>
+    <span class="note-text">🛡️ Anti-Ban Stealth Note</span>
+  </div>
 
   <!-- Main Application Container -->
   <div class="app-layout">
 
-    <!-- Top Navigation Bar (Playful Sticker Navbar) -->
+    <!-- Top Navigation Bar (Hand-Drawn Sketched Navbar) -->
     <header class="navbar-card">
+      <div class="tape-strip"></div>
       <div class="navbar-left">
         <div class="logo-sticker">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>
         </div>
         <div class="brand-text">
           <div class="brand-title-row">
-            <span class="brand-name">Rewards Pop Hub</span>
+            <span class="brand-name">Rewards Sketch Hub</span>
             <span class="sticker-badge badge-pink">4 ACCS ⚡</span>
           </div>
-          <span class="brand-caption">Tự Động Hóa Microsoft Rewards • Anti-Ban • Siêu Dễ Dùng</span>
+          <span class="brand-caption">Sổ Tay Tự Động Hóa Microsoft Rewards • Anti-Detection • Dễ Dùng</span>
         </div>
       </div>
 
@@ -47,187 +52,177 @@
           <span id="botStatusText">Ready (Idle)</span>
         </div>
         <button id="btnOpenSettings" class="btn btn-secondary-pill" title="Cài đặt thông số bot">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Cấu Hình</span>
         </button>
         <button id="btnOpenKeywords" class="btn btn-secondary-pill" title="Quản lý kho từ khóa tìm kiếm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           <span>Từ Khóa</span>
         </button>
       </div>
     </header>
 
-    <!-- BENTO KPI TILES (Playful Sticker Cards) -->
-    <section class="bento-kpi-grid">
-      <!-- KPI 1: Violet Accent -->
-      <div class="sticker-card kpi-card kpi-violet">
-        <div class="kpi-header">
-          <span class="kpi-title">TÀI KHOẢN QUẢN LÝ</span>
-          <span class="kpi-shape-badge bg-violet">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          </span>
-        </div>
-        <div class="kpi-value-row">
-          <span id="profileCountDisplay" class="kpi-number">4</span>
-          <span class="kpi-unit">PROFILES</span>
-        </div>
-        <span class="kpi-footer-text">100% Độc lập • 0 Xung đột cookie</span>
-      </div>
-
-      <!-- KPI 2: Amber Accent -->
-      <div class="sticker-card kpi-card kpi-yellow">
-        <div class="kpi-header">
-          <span class="kpi-title">MỤC TIÊU ĐIỂM HÔM NAY</span>
-          <span class="kpi-shape-badge bg-yellow">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          </span>
-        </div>
-        <div class="kpi-value-row">
-          <span class="kpi-number">~624</span>
-          <span class="kpi-unit">POINTS / DAY</span>
-        </div>
-        <span class="kpi-footer-text">31 PC + 21 Mobile x 4 Accs</span>
-      </div>
-
-      <!-- KPI 3: Mint Accent -->
-      <div class="sticker-card kpi-card kpi-mint">
-        <div class="kpi-header">
-          <span class="kpi-title">CƠ CHẾ ANTI-BAN</span>
-          <span class="kpi-shape-badge bg-mint">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          </span>
-        </div>
-        <div class="kpi-value-row">
-          <span class="kpi-number text-mint">STEALTH</span>
-          <span class="kpi-unit">ACTIVE</span>
-        </div>
-        <span class="kpi-footer-text">Gõ phím thật • Cuộn trang • Nghỉ batch</span>
-      </div>
-
-      <!-- KPI 4: Hot Pink Accent -->
-      <div class="sticker-card kpi-card kpi-pink">
-        <div class="kpi-header">
-          <span class="kpi-title">TRẠNG THÁI TIẾN TRÌNH</span>
-          <span class="kpi-shape-badge bg-pink">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </span>
-        </div>
-        <div class="kpi-value-row">
-          <span id="kpiEngineStatus" class="kpi-number text-pink">READY</span>
-          <span class="kpi-unit" id="kpiEngineSub">WAITING</span>
-        </div>
-        <span id="activeAccountNotice" class="kpi-footer-text">Sẵn sàng nhận lệnh điều khiển</span>
-      </div>
-    </section>
-
-    <!-- ACTION CONTROL HUB (Tactile Candy Buttons Strip) -->
-    <section class="sticker-card action-hub-card">
-      <div class="hub-content-row">
-        <div class="hub-text-group">
-          <div class="hub-badge-row">
-            <span class="sticker-pill-small">CONTROL ARCADE</span>
-          </div>
-          <h2 class="hub-title">Bộ Điều Khiển Tác Vụ Tự Động</h2>
-          <p class="hub-subtitle">Chạy hàng đợi tuần tự qua 4 tài khoản, tự động dọn dẹp tiến trình treo và giải phóng RAM.</p>
-        </div>
-        <div class="hub-action-buttons">
-          <!-- The Candy Button (Spec Primary) -->
-          <button id="btnRunAllFull" class="btn btn-candy btn-lg">
+    <!-- COMPACT CONTROL HUB & SUMMARY (Tối giản, gọn gàng, liền mạch) -->
+    <section class="sticker-card compact-control-card">
+      <div class="tape-strip"></div>
+      <div class="control-row-main">
+        <!-- Group Left: Primary Action Candy Buttons -->
+        <div class="control-buttons-group">
+          <button id="btnRunAllFull" class="btn btn-candy btn-run-all" title="Chạy tuần tự toàn bộ tài khoản: 31 lượt PC + 21 lượt Mobile">
             <span class="candy-icon-circle">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             </span>
-            <span>CHẠY TẤT CẢ 4 ACC (FULL PC + MOB)</span>
+            <span>CHẠY TẤT CẢ (FULL)</span>
           </button>
-          <button id="btnRunAllPC" class="btn btn-secondary-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <button id="btnRunAllPC" class="btn btn-secondary-pill" title="Chỉ chạy tìm kiếm Desktop PC">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
             <span>Chỉ PC</span>
           </button>
-          <button id="btnRunAllMobile" class="btn btn-secondary-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          <button id="btnRunAllMobile" class="btn btn-secondary-pill" title="Chỉ chạy tìm kiếm Mobile">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
             <span>Chỉ Mobile</span>
           </button>
-          <button id="btnStopAll" class="btn btn-danger-pill" disabled>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
+          <button id="btnStopAll" class="btn btn-danger-pill" disabled title="Dừng ngay lập tức toàn bộ tác vụ bot">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
             <span>DỪNG KHẨN CẤP</span>
           </button>
         </div>
+
+        <!-- Group Right: Sleek Minimalist KPI Badges -->
+        <div class="kpi-chips-strip">
+          <div class="kpi-mini-chip" title="Số lượng tài khoản đã nạp">
+            <span class="chip-icon bg-violet">👥</span>
+            <div class="chip-data">
+              <span class="chip-val"><span id="profileCountDisplay">4</span> Accs</span>
+              <span class="chip-sub">Tài Khoản</span>
+            </div>
+          </div>
+          <div class="kpi-mini-chip" title="Điểm ước tính tối đa thu về mỗi ngày">
+            <span class="chip-icon bg-yellow">🎯</span>
+            <div class="chip-data">
+              <span class="chip-val">~624 Pts</span>
+              <span class="chip-sub">Mục Tiêu/Ngày</span>
+            </div>
+          </div>
+          <div class="kpi-mini-chip" title="Cơ chế chống phát hiện bot mô phỏng hành vi tự nhiên">
+            <span class="chip-icon bg-mint">🛡️</span>
+            <div class="chip-data">
+              <span class="chip-val text-mint">Stealth</span>
+              <span class="chip-sub">Anti-Ban</span>
+            </div>
+          </div>
+          <div class="kpi-mini-chip" title="Trạng thái của bộ máy tìm kiếm">
+            <span class="chip-icon bg-pink">⚙️</span>
+            <div class="chip-data">
+              <span class="chip-val" id="kpiEngineStatus">READY</span>
+              <span class="chip-sub" id="kpiEngineSub">WAITING</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact status line -->
+      <div class="control-status-bar">
+        <span class="status-pulse-dot"></span>
+        <span id="activeAccountNotice" class="control-status-text">Sẵn sàng nhận lệnh điều khiển</span>
       </div>
     </section>
 
-    <!-- WORKSPACE SPLIT GRID: Profiles Left + Retro Arcade Terminal Right -->
-    <main class="workspace-grid">
+    <!-- PROFILES WORKSPACE SECTION (Full Width Grid) -->
+    <section class="profiles-section">
+      <div class="column-header">
+        <div class="column-title-wrap">
+          <h2 class="column-title">Hồ Sơ Tài Khoản</h2>
+          <span id="profilesBadge" class="sticker-badge badge-yellow">4 PROFILES</span>
+          <span class="column-subtitle">Mỗi tài khoản lưu phiên cookie độc lập, hỗ trợ chạy và dừng tìm kiếm riêng biệt.</span>
+        </div>
+        <button id="btnOpenAddProfile" class="btn btn-secondary-pill btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>+ Thêm Tài Khoản</span>
+        </button>
+      </div>
 
-      <!-- LEFT: Profile Sticker Cards Grid -->
-      <section class="profiles-column">
-        <div class="column-header">
-          <div class="column-title-wrap">
-            <h2 class="column-title">Hồ Sơ Tài Khoản</h2>
-            <span class="sticker-badge badge-yellow">4 PROFILES</span>
+      <div id="profilesGrid" class="profiles-cards-grid">
+        <!-- Dynamic Profile Sticker Cards injected by app.js -->
+        <div class="loading-state">Đang tải danh sách tài khoản...</div>
+      </div>
+    </section>
+
+    <!-- TERMINAL OUTPUT • REAL-TIME STREAM (Ở LUÔN DƯỚI CÙNG & PHÓNG TO THU NHỎ ĐƯỢC) -->
+    <section id="terminalSection" class="sticker-card terminal-bottom-card normal-size">
+      <div class="tape-strip"></div>
+      <!-- Drag Resize Bar on Top -->
+      <div id="terminalResizer" class="terminal-resizer" title="Kéo lên / xuống để chỉnh chiều cao Terminal">
+        <div class="resizer-handle"></div>
+      </div>
+
+      <!-- Terminal Header / Titlebar -->
+      <div class="terminal-titlebar">
+        <div class="titlebar-left">
+          <div class="candy-dots">
+            <span class="candy-dot dot-pink"></span>
+            <span class="candy-dot dot-yellow"></span>
+            <span class="candy-dot dot-mint"></span>
           </div>
-          <button id="btnOpenAddProfile" class="btn btn-secondary-pill btn-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span>+ Thêm Tài Khoản</span>
+          <span class="terminal-title-text">Terminal Output • Real-time Stream</span>
+          <span class="indicator-live">● LIVE</span>
+          <span id="logCounter" class="log-count-text">0 entries</span>
+        </div>
+
+        <!-- Collapsed Live Preview -->
+        <div id="terminalCollapsedPreview" class="collapsed-preview-line hidden">
+          <span class="preview-label">Log:</span>
+          <span id="previewText" class="preview-text">Đang lắng nghe tiến trình bot...</span>
+        </div>
+
+        <!-- Titlebar Right Actions & Window Sizing Controls -->
+        <div class="titlebar-actions">
+          <button id="btnClearLogs" class="terminal-action-btn" title="Xóa màn hình log">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span>Clear</span>
           </button>
-        </div>
+          <button id="btnDownloadLogs" class="terminal-action-btn" title="Xuất file nhật ký text">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Export</span>
+          </button>
 
-        <div id="profilesGrid" class="profiles-cards-grid">
-          <!-- Dynamic Profile Sticker Cards injected by app.js -->
-          <div class="loading-state">Đang tải danh sách tài khoản...</div>
-        </div>
-      </section>
+          <label class="auto-scroll-toggle" title="Tự động cuộn xuống dòng mới">
+            <input type="checkbox" id="chkAutoScroll" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Cuộn</span>
+          </label>
 
-      <!-- RIGHT: Retro-Arcade Developer Terminal -->
-      <section class="terminal-column">
-        <div class="sticker-card terminal-card-shell">
-          <!-- Terminal Titlebar with Colored Candy Buttons -->
-          <div class="terminal-titlebar">
-            <div class="candy-dots">
-              <span class="candy-dot dot-pink"></span>
-              <span class="candy-dot dot-yellow"></span>
-              <span class="candy-dot dot-mint"></span>
-            </div>
-            <div class="titlebar-center">
-              <span class="terminal-title-text">Terminal Output • Real-time Stream</span>
-            </div>
-            <div class="titlebar-actions">
-              <button id="btnClearLogs" class="terminal-action-btn" title="Xóa màn hình log">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                <span>Clear</span>
-              </button>
-              <button id="btnDownloadLogs" class="terminal-action-btn" title="Xuất file nhật ký text">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                <span>Export</span>
-              </button>
-            </div>
-          </div>
+          <div class="titlebar-divider"></div>
 
-          <!-- Terminal Log Screen -->
-          <div id="terminalLogBody" class="terminal-screen-body">
-            <div class="terminal-line line-system">
-              <span class="log-tag tag-sys">SYS</span>
-              <span class="log-time">[16:00:00]</span>
-              <span class="log-content">Rewards Pop Hub Engine v2.0 initialized. WebSocket listening...</span>
-            </div>
-          </div>
-
-          <!-- Terminal Footer -->
-          <div class="terminal-footer">
-            <div class="footer-left">
-              <span class="indicator-live">● LIVE STREAM</span>
-              <span id="logCounter" class="log-count-text">0 entries</span>
-            </div>
-            <div class="footer-right">
-              <label class="auto-scroll-toggle">
-                <input type="checkbox" id="chkAutoScroll" checked>
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Auto-scroll</span>
-              </label>
-            </div>
+          <!-- Phóng to / Thu nhỏ Controls -->
+          <div class="terminal-size-controls">
+            <button id="btnCollapseTerminal" class="btn-size-mode" title="Thu nhỏ (Gọn thành thanh bar ngang dưới cùng)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Thu nhỏ</span>
+            </button>
+            <button id="btnNormalTerminal" class="btn-size-mode active" title="Kích thước vừa vặn tiêu chuẩn (280px)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+              <span>Vừa</span>
+            </button>
+            <button id="btnMaximizeTerminal" class="btn-size-mode" title="Phóng to (560px để kiểm tra toàn bộ log)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+              <span>Phóng to</span>
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-    </main>
+      <!-- Terminal Log Body Container -->
+      <div id="terminalBodyWrapper" class="terminal-body-wrapper">
+        <div id="terminalLogBody" class="terminal-screen-body">
+          <div class="terminal-line line-system">
+            <span class="log-tag tag-sys">SYS</span>
+            <span class="log-time">[16:00:00]</span>
+            <span class="log-content">Rewards Pop Hub Engine v2.0 initialized. WebSocket listening...</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
   </div>
 
