@@ -1,0 +1,4 @@
+selenium>=4.20.0
+webdriver-manager>=4.0.0
+starlette>=0.30.0
+uvicorn>=0.25.0

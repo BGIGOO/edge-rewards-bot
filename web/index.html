@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rewards Pop Hub • Quản Lý 4+ Acc Microsoft Rewards</title>
+  <!-- Google Fonts: Outfit (Headings) + Plus Jakarta Sans (Body) + JetBrains Mono (Terminal) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Playful Background Shapes (Memphis Decors) -->
+  <div class="memphis-shape shape-circle"></div>
+  <div class="memphis-shape shape-square"></div>
+  <div class="memphis-shape shape-pill"></div>
+  <div class="memphis-shape shape-triangle"></div>
+
+  <!-- Main Application Container -->
+  <div class="app-layout">
+
+    <!-- Top Navigation Bar (Playful Sticker Navbar) -->
+    <header class="navbar-card">
+      <div class="navbar-left">
+        <div class="logo-sticker">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <span class="brand-name">Rewards Pop Hub</span>
+            <span class="sticker-badge badge-pink">4 ACCS ⚡</span>
+          </div>
+          <span class="brand-caption">Tự Động Hóa Microsoft Rewards • Anti-Ban • Siêu Dễ Dùng</span>
+        </div>
+      </div>
+
+      <div class="navbar-right">
+        <div id="connectionStatus" class="chip-status connected">
+          <span class="status-dot"></span>
+          <span id="connStatusText">Connected :5000</span>
+        </div>
+        <div id="botStatusPill" class="chip-status idle">
+          <span class="status-pulse-dot"></span>
+          <span id="botStatusText">Ready (Idle)</span>
+        </div>
+        <button id="btnOpenSettings" class="btn btn-secondary-pill" title="Cài đặt thông số bot">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>Cấu Hình</span>
+        </button>
+        <button id="btnOpenKeywords" class="btn btn-secondary-pill" title="Quản lý kho từ khóa tìm kiếm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>Từ Khóa</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- BENTO KPI TILES (Playful Sticker Cards) -->
+    <section class="bento-kpi-grid">
+      <!-- KPI 1: Violet Accent -->
+      <div class="sticker-card kpi-card kpi-violet">
+        <div class="kpi-header">
+          <span class="kpi-title">TÀI KHOẢN QUẢN LÝ</span>
+          <span class="kpi-shape-badge bg-violet">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span id="profileCountDisplay" class="kpi-number">4</span>
+          <span class="kpi-unit">PROFILES</span>
+        </div>
+        <span class="kpi-footer-text">100% Độc lập • 0 Xung đột cookie</span>
+      </div>
+
+      <!-- KPI 2: Amber Accent -->
+      <div class="sticker-card kpi-card kpi-yellow">
+        <div class="kpi-header">
+          <span class="kpi-title">MỤC TIÊU ĐIỂM HÔM NAY</span>
+          <span class="kpi-shape-badge bg-yellow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-number">~624</span>
+          <span class="kpi-unit">POINTS / DAY</span>
+        </div>
+        <span class="kpi-footer-text">31 PC + 21 Mobile x 4 Accs</span>
+      </div>
+
+      <!-- KPI 3: Mint Accent -->
+      <div class="sticker-card kpi-card kpi-mint">
+        <div class="kpi-header">
+          <span class="kpi-title">CƠ CHẾ ANTI-BAN</span>
+          <span class="kpi-shape-badge bg-mint">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-number text-mint">STEALTH</span>
+          <span class="kpi-unit">ACTIVE</span>
+        </div>
+        <span class="kpi-footer-text">Gõ phím thật • Cuộn trang • Nghỉ batch</span>
+      </div>
+
+      <!-- KPI 4: Hot Pink Accent -->
+      <div class="sticker-card kpi-card kpi-pink">
+        <div class="kpi-header">
+          <span class="kpi-title">TRẠNG THÁI TIẾN TRÌNH</span>
+          <span class="kpi-shape-badge bg-pink">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </span>
+        </div>
+        <div class="kpi-value-row">
+          <span id="kpiEngineStatus" class="kpi-number text-pink">READY</span>
+          <span class="kpi-unit" id="kpiEngineSub">WAITING</span>
+        </div>
+        <span id="activeAccountNotice" class="kpi-footer-text">Sẵn sàng nhận lệnh điều khiển</span>
+      </div>
+    </section>
+
+    <!-- ACTION CONTROL HUB (Tactile Candy Buttons Strip) -->
+    <section class="sticker-card action-hub-card">
+      <div class="hub-content-row">
+        <div class="hub-text-group">
+          <div class="hub-badge-row">
+            <span class="sticker-pill-small">CONTROL ARCADE</span>
+          </div>
+          <h2 class="hub-title">Bộ Điều Khiển Tác Vụ Tự Động</h2>
+          <p class="hub-subtitle">Chạy hàng đợi tuần tự qua 4 tài khoản, tự động dọn dẹp tiến trình treo và giải phóng RAM.</p>
+        </div>
+        <div class="hub-action-buttons">
+          <!-- The Candy Button (Spec Primary) -->
+          <button id="btnRunAllFull" class="btn btn-candy btn-lg">
+            <span class="candy-icon-circle">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </span>
+            <span>CHẠY TẤT CẢ 4 ACC (FULL PC + MOB)</span>
+          </button>
+          <button id="btnRunAllPC" class="btn btn-secondary-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <span>Chỉ PC</span>
+          </button>
+          <button id="btnRunAllMobile" class="btn btn-secondary-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            <span>Chỉ Mobile</span>
+          </button>
+          <button id="btnStopAll" class="btn btn-danger-pill" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
+            <span>DỪNG KHẨN CẤP</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORKSPACE SPLIT GRID: Profiles Left + Retro Arcade Terminal Right -->
+    <main class="workspace-grid">
+
+      <!-- LEFT: Profile Sticker Cards Grid -->
+      <section class="profiles-column">
+        <div class="column-header">
+          <div class="column-title-wrap">
+            <h2 class="column-title">Hồ Sơ Tài Khoản</h2>
+            <span class="sticker-badge badge-yellow">4 PROFILES</span>
+          </div>
+          <button id="btnOpenAddProfile" class="btn btn-secondary-pill btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>+ Thêm Tài Khoản</span>
+          </button>
+        </div>
+
+        <div id="profilesGrid" class="profiles-cards-grid">
+          <!-- Dynamic Profile Sticker Cards injected by app.js -->
+          <div class="loading-state">Đang tải danh sách tài khoản...</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Retro-Arcade Developer Terminal -->
+      <section class="terminal-column">
+        <div class="sticker-card terminal-card-shell">
+          <!-- Terminal Titlebar with Colored Candy Buttons -->
+          <div class="terminal-titlebar">
+            <div class="candy-dots">
+              <span class="candy-dot dot-pink"></span>
+              <span class="candy-dot dot-yellow"></span>
+              <span class="candy-dot dot-mint"></span>
+            </div>
+            <div class="titlebar-center">
+              <span class="terminal-title-text">Terminal Output • Real-time Stream</span>
+            </div>
+            <div class="titlebar-actions">
+              <button id="btnClearLogs" class="terminal-action-btn" title="Xóa màn hình log">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Clear</span>
+              </button>
+              <button id="btnDownloadLogs" class="terminal-action-btn" title="Xuất file nhật ký text">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Terminal Log Screen -->
+          <div id="terminalLogBody" class="terminal-screen-body">
+            <div class="terminal-line line-system">
+              <span class="log-tag tag-sys">SYS</span>
+              <span class="log-time">[16:00:00]</span>
+              <span class="log-content">Rewards Pop Hub Engine v2.0 initialized. WebSocket listening...</span>
+            </div>
+          </div>
+
+          <!-- Terminal Footer -->
+          <div class="terminal-footer">
+            <div class="footer-left">
+              <span class="indicator-live">● LIVE STREAM</span>
+              <span id="logCounter" class="log-count-text">0 entries</span>
+            </div>
+            <div class="footer-right">
+              <label class="auto-scroll-toggle">
+                <input type="checkbox" id="chkAutoScroll" checked>
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Auto-scroll</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL: ADD / EDIT PROFILE -->
+  <div id="profileModal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="profileModalTitle">Thêm Tài Khoản Mới</h3>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <form id="profileForm" class="modal-form-content">
+        <input type="hidden" id="formProfileId">
+        <div class="input-field-group">
+          <label for="formProfileName">Tên gợi nhớ / Email tài khoản:</label>
+          <input type="text" id="formProfileName" class="form-input" placeholder="Profile 3 (acc3@outlook.com)" required>
+        </div>
+        <div class="input-field-group">
+          <label for="formProfilePath">Thư mục Profile (User Data Directory):</label>
+          <input type="text" id="formProfilePath" class="form-input" placeholder="./edge_profile_3">
+          <span class="field-hint">Mỗi tài khoản có thư mục riêng để lưu cookie vĩnh viễn, không bị đăng xuất.</span>
+        </div>
+        <div class="modal-button-row">
+          <button type="button" class="btn btn-secondary-pill" onclick="closeProfileModal()">Hủy</button>
+          <button type="submit" class="btn btn-candy">Lưu Tài Khoản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS (ANTI-BAN CONFIG) -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-box modal-wide">
+      <div class="modal-head">
+        <div>
+          <h3>Cấu Hình Tìm Kiếm & Anti-Detection</h3>
+          <p class="modal-head-subtitle">Tùy biến các tham số mô phỏng người thật chống chặn điểm Microsoft Rewards.</p>
+        </div>
+        <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <form id="settingsForm" class="modal-form-content">
+        <div class="bento-settings-grid">
+          <!-- Card 1: Search Counts -->
+          <div class="settings-subcard">
+            <h4 class="subcard-title">🎯 Số lượt tìm kiếm mỗi tài khoản</h4>
+            <div class="two-col-inputs">
+              <div class="input-field-group">
+                <label>Lượt Desktop (PC):</label>
+                <input type="number" id="cfgPcSearches" class="form-input" min="5" max="60" value="31">
+                <span class="field-hint">Mặc định: 31 lượt (~93 điểm)</span>
+              </div>
+              <div class="input-field-group">
+                <label>Lượt Mobile (Điện thoại):</label>
+                <input type="number" id="cfgMobileSearches" class="form-input" min="5" max="40" value="21">
+                <span class="field-hint">Mặc định: 21 lượt (~63 điểm)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Delays & Cooldown -->
+          <div class="settings-subcard">
+            <h4 class="subcard-title">⏳ Độ trễ ngẫu nhiên & Cooldown Batch</h4>
+            <div class="two-col-inputs">
+              <div class="input-field-group">
+                <label>Delay tối thiểu (Giây):</label>
+                <input type="number" id="cfgMinDelay" class="form-input" min="5" max="60" value="12">
+              </div>
+              <div class="input-field-group">
+                <label>Delay tối đa (Giây):</label>
+                <input type="number" id="cfgMaxDelay" class="form-input" min="10" max="90" value="22">
+              </div>
+            </div>
+            <div class="checkbox-row mt-2">
+              <input type="checkbox" id="cfgEnableBatch" class="custom-checkbox">
+              <label for="cfgEnableBatch">Chia nhóm nghỉ Cooldown (Tránh bị Bing giới hạn điểm 15 phút)</label>
+            </div>
+            <div class="two-col-inputs mt-1">
+              <div class="input-field-group">
+                <label>Lượt mỗi nhóm:</label>
+                <input type="number" id="cfgBatchSize" class="form-input" value="4">
+              </div>
+              <div class="input-field-group">
+                <label>Nghỉ giữa nhóm (Phút):</label>
+                <input type="number" id="cfgBatchCooldown" class="form-input" value="3">
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Human Simulation -->
+          <div class="settings-subcard">
+            <h4 class="subcard-title">🤖 Hành vi mô phỏng người thật</h4>
+            <div class="checkbox-row">
+              <input type="checkbox" id="cfgSmoothScroll" class="custom-checkbox" checked>
+              <label for="cfgSmoothScroll">Cuộn trang mượt mà & đọc nội dung kết quả</label>
+            </div>
+            <div class="checkbox-row mt-1">
+              <input type="checkbox" id="cfgMouseMovement" class="custom-checkbox" checked>
+              <label for="cfgMouseMovement">Di chuyển chuột ngẫu nhiên (Mouse Dynamics)</label>
+            </div>
+            <div class="input-field-group mt-2">
+              <label>Tỉ lệ click đọc bài viết kết quả (CTR):</label>
+              <input type="number" step="0.05" id="cfgClickChance" class="form-input" min="0" max="1" value="0.25">
+              <span class="field-hint">0.25 = 25% lượt tìm kiếm sẽ ngẫu nhiên bấm vào 1 bài báo đọc 4-8s</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Browser Options -->
+          <div class="settings-subcard">
+            <h4 class="subcard-title">🌐 Tùy chọn trình duyệt Edge</h4>
+            <div class="checkbox-row">
+              <input type="checkbox" id="cfgHeadless" class="custom-checkbox">
+              <label for="cfgHeadless">Chế độ chạy ẩn (Headless - Không hiện cửa sổ trình duyệt)</label>
+            </div>
+            <span class="field-hint">Bỏ chọn khi cần xem trực quan quá trình bot tìm kiếm.</span>
+            <div class="input-field-group mt-2">
+              <label>Thiết bị giả lập Mobile:</label>
+              <select id="cfgMobileDevice" class="form-input">
+                <option value="Pixel 7">Google Pixel 7 (Chuẩn nhất)</option>
+                <option value="Samsung Galaxy S20 Ultra">Samsung Galaxy S20 Ultra</option>
+                <option value="iPhone 14 Pro Max">iPhone 14 Pro Max</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-button-row">
+          <button type="button" class="btn btn-secondary-pill" onclick="closeSettingsModal()">Đóng</button>
+          <button type="submit" class="btn btn-candy">Lưu Cấu Hình</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: KEYWORDS POOL -->
+  <div id="keywordsModal" class="modal-backdrop hidden">
+    <div class="modal-box modal-wide">
+      <div class="modal-head">
+        <div>
+          <h3>Kho Từ Khóa Tìm Kiếm Tự Nhiên</h3>
+          <p class="modal-head-subtitle">Danh sách từ khóa phong phú đa chủ đề để Microsoft không nhận diện là spam.</p>
+        </div>
+        <button class="modal-close" onclick="closeKeywordsModal()">&times;</button>
+      </div>
+      <div class="keywords-toolbar-row">
+        <span class="keywords-count-chip">Tổng từ khóa: <strong id="keywordsCountDisplay">0</strong></span>
+        <button id="btnSeedKeywords" class="btn btn-secondary-pill btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          <span>Nạp 50+ từ khóa mẫu tự nhiên</span>
+        </button>
+      </div>
+      <div class="keywords-edit-area">
+        <textarea id="keywordsEditor" class="keywords-codebox" placeholder="Mỗi từ khóa trên một dòng..."></textarea>
+      </div>
+      <div class="modal-button-row">
+        <button type="button" class="btn btn-secondary-pill" onclick="closeKeywordsModal()">Hủy</button>
+        <button id="btnSaveKeywords" class="btn btn-candy">Lưu Kho Từ Khóa</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

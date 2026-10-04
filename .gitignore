@@ -1,0 +1,43 @@
+# ====================================================================
+# BẢO MẬT: Tuyệt đối không đưa Profile Edge (chứa Cookie, Session, Passwords) lên Git
+# ====================================================================
+edge_profile/
+edge_profile/*
+edge_profile_*/
+edge_profile_*/*
+edge_profile*
+**/edge_profile*/**
+DevToolsActivePort
+
+# Môi trường bí mật & Token cá nhân
+.env
+*.env
+*.local
+*.key
+*.pem
+*.token
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.venv/
+venv/
+env/
+ENV/
+
+# Nhật ký và file tạm
+*.log
+*.tmp
+temp/
+logs/
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+Desktop.ini

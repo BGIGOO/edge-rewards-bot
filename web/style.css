@@ -1,0 +1,1230 @@
+/* ====================================================================
+   PLAYFUL GEOMETRIC DESIGN SYSTEM (MEMPHIS / POP STICKER / NEO-POP)
+   Vibe: Friendly, Tactile, Pop, Energetic.
+   "Stable Grid, Wild Decoration" • Warm Cream Canvas • Hard Pop Shadows
+   ==================================================================== */
+
+:root {
+  /* Colors - Light Pop Palette */
+  --bg-canvas: #FFFDF5;         /* Warm Cream / Off-White Paper feel */
+  --bg-card: #FFFFFF;           /* Crisp White Card */
+  --text-main: #1E293B;         /* Slate 800 (Softer than stark black) */
+  --text-muted: #64748B;        /* Slate 500 */
+  --text-light: #94A3B8;
+
+  /* Playful Brand & Accent Confetti */
+  --accent-violet: #8B5CF6;     /* Vivid Violet (Primary Brand) */
+  --accent-pink: #F472B6;       /* Hot Pink (Playful Pop) */
+  --accent-yellow: #FBBF24;     /* Sunny Amber / Yellow (Optimism) */
+  --accent-mint: #34D399;       /* Emerald / Mint (Freshness) */
+  --accent-cyan: #06B6D4;       /* Electric Cyan */
+  --accent-red: #EF4444;        /* Crimson Pop */
+
+  /* Chunky Solid Border */
+  --border-dark: #1E293B;       /* Chunky 2px / 3px dark stroke */
+  --border-light: #CBD5E1;      /* Slate 300 for neutral inputs */
+
+  /* Typography */
+  --font-headings: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Geometry & Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+
+  /* Hard Pop Shadows (No Blur, Tactile Offset) */
+  --shadow-xs: 2px 2px 0px 0px #1E293B;
+  --shadow-sm: 3px 3px 0px 0px #1E293B;
+  --shadow-md: 5px 5px 0px 0px #1E293B;
+  --shadow-lg: 7px 7px 0px 0px #1E293B;
+  --shadow-modal: 9px 9px 0px 0px #1E293B;
+
+  /* Colored Hard Shadows */
+  --shadow-violet: 5px 5px 0px 0px #8B5CF6;
+  --shadow-pink: 5px 5px 0px 0px #F472B6;
+  --shadow-yellow: 5px 5px 0px 0px #FBBF24;
+  --shadow-mint: 5px 5px 0px 0px #34D399;
+
+  /* Bounce Physics Curve */
+  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Polka Dot Grid Texture */
+  background-image: radial-gradient(#CBD5E1 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* ====================================================================
+   MEMPHIS FLOATING SHAPES (Playful Geometric Decorative Accents)
+   ==================================================================== */
+.memphis-shape {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border: 2px solid var(--border-dark);
+  box-shadow: 4px 4px 0px rgba(30, 41, 59, 0.15);
+  opacity: 0.85;
+}
+
+.shape-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: #FEF08A; /* Soft Yellow */
+  top: -40px;
+  right: -30px;
+  transform: rotate(12deg);
+}
+
+.shape-square {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  background: #FBCFE8; /* Soft Pink */
+  bottom: 80px;
+  left: -20px;
+  transform: rotate(-15deg);
+}
+
+.shape-pill {
+  width: 120px;
+  height: 50px;
+  border-radius: var(--radius-pill);
+  background: #A7F3D0; /* Soft Mint */
+  top: 35%;
+  right: -40px;
+  transform: rotate(35deg);
+}
+
+.shape-triangle {
+  width: 60px;
+  height: 60px;
+  background: #DDD6FE; /* Soft Violet */
+  border-radius: 12px;
+  top: 15%;
+  left: 20px;
+  transform: rotate(25deg);
+}
+
+/* App Shell Container */
+.app-layout {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ====================================================================
+   STICKER CARDS (Core Component Specification)
+   ==================================================================== */
+.sticker-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition: all 0.25s var(--ease-elastic);
+  position: relative;
+}
+
+/* Sticker Badges & Pills */
+.sticker-badge {
+  font-family: var(--font-headings);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border-dark);
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.badge-pink { background: var(--accent-pink); color: #fff; }
+.badge-yellow { background: var(--accent-yellow); color: var(--text-main); }
+.badge-mint { background: var(--accent-mint); color: var(--text-main); }
+.badge-violet { background: var(--accent-violet); color: #fff; }
+
+.sticker-pill-small {
+  font-family: var(--font-headings);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: var(--accent-yellow);
+  color: var(--text-main);
+  border: 1.5px solid var(--border-dark);
+  border-radius: var(--radius-pill);
+  box-shadow: 1.5px 1.5px 0px var(--border-dark);
+}
+
+/* ====================================================================
+   TOP NAVBAR (Tactile Sticker Pill Navigation)
+   ==================================================================== */
+.navbar-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-sticker {
+  width: 42px;
+  height: 42px;
+  background: var(--accent-violet);
+  color: #fff;
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 3px 3px 0px var(--border-dark);
+  transform: rotate(-3deg);
+  transition: transform 0.25s var(--ease-elastic);
+}
+
+.logo-sticker:hover {
+  transform: rotate(4deg) scale(1.08);
+}
+
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-name {
+  font-family: var(--font-headings);
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.brand-caption {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Chip Status Pills */
+.chip-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  background: #FFFFFF;
+  border: 2px solid var(--border-dark);
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.chip-status.connected {
+  background: #ECFDF5;
+  color: #065F46;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-mint);
+  border: 1.5px solid var(--border-dark);
+}
+
+.chip-status.idle {
+  background: #F8FAFC;
+  color: var(--text-main);
+}
+
+.chip-status.running {
+  background: #FDF2F8;
+  color: #9D174D;
+}
+
+.status-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+  border: 1.5px solid var(--border-dark);
+}
+
+.chip-status.running .status-pulse-dot {
+  background-color: var(--accent-pink);
+  animation: pulse-dot 1.2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(0.9); }
+}
+
+/* ====================================================================
+   BUTTONS (The Candy Button & Playful Secondary Pills)
+   ==================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border-dark);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.2s var(--ease-elastic);
+  position: relative;
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--border-dark);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12.5px;
+}
+
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+/* PRIMARY: "THE CANDY BUTTON" */
+.btn-candy {
+  background: var(--accent-violet);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-candy:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-lg);
+  background: #7C3AED;
+}
+
+.candy-icon-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  color: var(--accent-violet);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border-dark);
+}
+
+/* SECONDARY: PLAYFUL PILL BUTTON */
+.btn-secondary-pill {
+  background: #FFFFFF;
+  color: var(--text-main);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-secondary-pill:hover:not(:disabled) {
+  background: var(--accent-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* DANGER BUTTON */
+.btn-danger-pill {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn-danger-pill:hover:not(:disabled) {
+  background: #EF4444;
+  color: #FFFFFF;
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Profile Segment Buttons */
+.btn-segment {
+  background: #FFFFFF;
+  color: var(--text-main);
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.btn-segment:hover:not(:disabled) {
+  background: var(--accent-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--border-dark);
+}
+
+.btn-segment-full {
+  background: var(--accent-violet);
+  color: #FFFFFF;
+}
+
+.btn-segment-full:hover:not(:disabled) {
+  background: #6D28D9;
+  color: #FFFFFF;
+}
+
+/* Login Edge Button */
+.btn-login-edge {
+  background: #E0E7FF;
+  color: #4338CA;
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  flex: 1;
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.btn-login-edge:hover:not(:disabled) {
+  background: var(--accent-cyan);
+  color: var(--text-main);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--border-dark);
+}
+
+/* Round Circle Icon Buttons */
+.btn-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--border-dark);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--border-dark);
+  transition: all 0.2s var(--ease-elastic);
+}
+
+.btn-icon-circle:hover:not(:disabled) {
+  background: var(--accent-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--border-dark);
+}
+
+.btn-icon-circle.danger:hover:not(:disabled) {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+/* ====================================================================
+   BENTO KPI STRIP (Playful Geometric Sticker Cards)
+   ==================================================================== */
+.bento-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .bento-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .bento-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Colored Sticker Drops */
+.kpi-violet { box-shadow: var(--shadow-violet); }
+.kpi-yellow { box-shadow: var(--shadow-yellow); }
+.kpi-mint   { box-shadow: var(--shadow-mint); }
+.kpi-pink   { box-shadow: var(--shadow-pink); }
+
+.kpi-card:hover {
+  transform: translate(-2px, -2px) rotate(-0.5deg);
+}
+
+.kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-title {
+  font-family: var(--font-headings);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.kpi-shape-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-dark);
+  box-shadow: 2px 2px 0px var(--border-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-violet { background: var(--accent-violet); color: #fff; }
+.bg-yellow { background: var(--accent-yellow); color: var(--text-main); }
+.bg-mint   { background: var(--accent-mint); color: var(--text-main); }
+.bg-pink   { background: var(--accent-pink); color: #fff; }
+
+.kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.kpi-number {
+  font-family: var(--font-headings);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.text-mint { color: #059669; }
+.text-pink { color: #DB2777; }
+
+.kpi-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.kpi-footer-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ====================================================================
+   ACTION CONTROL HUB CARD
+   ==================================================================== */
+.action-hub-card {
+  padding: 22px 24px;
+}
+
+.hub-content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.hub-badge-row {
+  margin-bottom: 4px;
+}
+
+.hub-title {
+  font-family: var(--font-headings);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.hub-subtitle {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.hub-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ====================================================================
+   WORKSPACE GRID (Profiles Left + Terminal Right)
+   ==================================================================== */
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.column-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.column-title {
+  font-family: var(--font-headings);
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* Profiles Grid */
+.profiles-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+/* ====================================================================
+   PROFILE STICKER CARDS (Wiggle / Pop Effect)
+   ==================================================================== */
+.profile-sticker-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.25s var(--ease-elastic);
+  position: relative;
+}
+
+.profile-sticker-card:hover {
+  transform: translate(-3px, -3px) rotate(-0.5deg);
+  box-shadow: var(--shadow-lg);
+}
+
+.profile-sticker-card.running {
+  border-color: var(--accent-violet);
+  box-shadow: 6px 6px 0px 0px var(--accent-violet);
+}
+
+.card-identity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.identity-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-avatar-pill {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border-dark);
+  font-family: var(--font-headings);
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.identity-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-name-title {
+  font-family: var(--font-headings);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-path-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.card-status-pill {
+  font-family: var(--font-headings);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border-dark);
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+.status-ready {
+  background: var(--accent-mint);
+  color: var(--text-main);
+}
+
+.status-running {
+  background: var(--accent-pink);
+  color: #fff;
+  animation: pulse-dot 1.5s infinite;
+}
+
+.card-run-segments {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 6px;
+}
+
+.card-utilities-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 2px dashed #E2E8F0;
+}
+
+.loading-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  background: #FFFFFF;
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--border-dark);
+  font-weight: 600;
+}
+
+/* ====================================================================
+   RETRO ARCADE DEVELOPER TERMINAL
+   ==================================================================== */
+.terminal-card-shell {
+  display: flex;
+  flex-direction: column;
+  height: 650px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  position: sticky;
+  top: 20px;
+}
+
+.terminal-titlebar {
+  background: #F8FAFC;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--border-dark);
+}
+
+.candy-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.candy-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-dark);
+}
+
+.dot-pink   { background: var(--accent-pink); }
+.dot-yellow { background: var(--accent-yellow); }
+.dot-mint   { background: var(--accent-mint); }
+
+.terminal-title-text {
+  font-family: var(--font-headings);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-action-btn {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-dark);
+  color: var(--text-main);
+  padding: 3px 8px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 1.5px 1.5px 0px var(--border-dark);
+  transition: all 0.15s;
+}
+
+.terminal-action-btn:hover {
+  background: var(--accent-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px var(--border-dark);
+}
+
+/* Terminal Screen (Slate 800 Retro Console) */
+.terminal-screen-body {
+  flex: 1;
+  padding: 14px 16px;
+  background: #1E293B;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.terminal-screen-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-screen-body::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+
+.terminal-screen-body::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+  border: 1.5px solid #1E293B;
+}
+
+/* Terminal Line & Stickers */
+.terminal-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  word-break: break-word;
+}
+
+.log-tag {
+  font-family: var(--font-headings);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid #0F172A;
+  box-shadow: 1.5px 1.5px 0px #0F172A;
+  flex-shrink: 0;
+}
+
+.tag-sys    { background: var(--accent-violet); color: #fff; }
+.tag-start  { background: var(--accent-cyan); color: var(--text-main); }
+.tag-action { background: var(--accent-pink); color: #fff; }
+.tag-ok     { background: var(--accent-mint); color: var(--text-main); }
+.tag-warn   { background: var(--accent-yellow); color: var(--text-main); }
+.tag-err    { background: var(--accent-red); color: #fff; }
+
+.log-time {
+  color: #94A3B8;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.terminal-line.info .log-content    { color: #F8FAFC; }
+.terminal-line.start .log-content   { color: #38BDF8; font-weight: 600; }
+.terminal-line.action .log-content  { color: #F472B6; }
+.terminal-line.success .log-content { color: #34D399; font-weight: 700; }
+.terminal-line.warn .log-content    { color: #FBBF24; }
+.terminal-line.error .log-content   { color: #F87171; font-weight: 700; }
+
+/* Terminal Footer */
+.terminal-footer {
+  background: #F8FAFC;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 2px solid var(--border-dark);
+  font-family: var(--font-headings);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.indicator-live {
+  color: #059669;
+}
+
+/* Auto-scroll Toggle Switch */
+.auto-scroll-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auto-scroll-toggle input {
+  display: none;
+}
+
+.toggle-slider {
+  width: 28px;
+  height: 16px;
+  background: #E2E8F0;
+  border: 1.5px solid var(--border-dark);
+  border-radius: var(--radius-pill);
+  position: relative;
+  transition: 0.2s;
+  box-shadow: 1.5px 1.5px 0px var(--border-dark);
+}
+
+.toggle-slider:before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  left: 2px;
+  top: 1.5px;
+  background: var(--border-dark);
+  transition: 0.2s;
+}
+
+.auto-scroll-toggle input:checked + .toggle-slider {
+  background: var(--accent-mint);
+}
+
+.auto-scroll-toggle input:checked + .toggle-slider:before {
+  transform: translateX(11px);
+}
+
+/* ====================================================================
+   MODALS (Sticker Dialogs with Hard Pop Shadows)
+   ==================================================================== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.modal-backdrop.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.modal-box {
+  background: #FFFFFF;
+  border: 3px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  animation: modal-pop 0.25s var(--ease-elastic);
+}
+
+.modal-box.modal-wide {
+  max-width: 760px;
+}
+
+@keyframes modal-pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-head {
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--border-dark);
+  background: #FEF08A; /* Sunny Amber Header */
+}
+
+.modal-head h3 {
+  font-family: var(--font-headings);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.modal-head-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--border-dark);
+  box-shadow: 2px 2px 0px var(--border-dark);
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #EF4444;
+  color: #fff;
+  transform: translate(-1px, -1px);
+}
+
+.modal-form-content {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-field-group label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.form-input {
+  background: #FFFFFF;
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 2px 2px 0px transparent;
+  transition: all 0.15s ease;
+}
+
+.form-input:focus {
+  border-color: var(--accent-violet);
+  box-shadow: 4px 4px 0px var(--accent-violet);
+}
+
+.field-hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.modal-button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Settings Subcards */
+.bento-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 650px) {
+  .bento-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings-subcard {
+  background: #F8FAFC;
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 3px 3px 0px var(--border-dark);
+}
+
+.subcard-title {
+  font-family: var(--font-headings);
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border-dark);
+}
+
+.two-col-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-row label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-violet);
+  cursor: pointer;
+  border: 2px solid var(--border-dark);
+}
+
+/* Keywords Tooling */
+.keywords-toolbar-row {
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--border-dark);
+  background: #F8FAFC;
+}
+
+.keywords-count-chip {
+  font-family: var(--font-headings);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.keywords-edit-area {
+  padding: 16px 22px;
+}
+
+.keywords-codebox {
+  width: 100%;
+  height: 280px;
+  background: #FFFDF5;
+  border: 2px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  box-shadow: 3px 3px 0px var(--border-dark);
+}
+
+.keywords-codebox:focus {
+  border-color: var(--accent-violet);
+  box-shadow: 4px 4px 0px var(--accent-violet);
+}
+
+.mt-1 { margin-top: 6px; }
+.mt-2 { margin-top: 10px; }
