@@ -11,7 +11,7 @@
     "enable_mouse_movement": true,
     "random_click_chance": 0.25,
     "human_typing_speed_min": 0.04,
-    "human_typing_speed_max": 0.10
+    "human_typing_speed_max": 0.1
   },
   "browser_settings": {
     "profile_directory_path": "./edge_profile",
@@ -21,27 +21,35 @@
   "profiles": [
     {
       "id": "1",
-      "name": "Profile 1 (Chính)",
+      "name": "manhnguyen1745@gmail.com",
+      "email": "manhnguyen1745@gmail.com",
       "path": "./edge_profile",
-      "profile_directory": "Default"
+      "profile_directory": "Default",
+      "status": "ready"
     },
     {
       "id": "2",
-      "name": "Profile 2 (Phụ 1)",
+      "name": "manhnguyen1768@gmail.com",
+      "email": "manhnguyen1768@gmail.com",
       "path": "./edge_profile_2",
-      "profile_directory": "Profile 1"
+      "profile_directory": "Profile 1",
+      "status": "ready"
     },
     {
       "id": "3",
-      "name": "Profile 3 (Tài khoản 3)",
+      "name": "n22dcat034@student.ptithcm.edu.vn",
+      "email": "n22dcat034@student.ptithcm.edu.vn",
       "path": "./edge_profile_3",
-      "profile_directory": "Default"
+      "profile_directory": "Profile 2",
+      "status": "ready"
     },
     {
       "id": "4",
-      "name": "Profile 4 (Tài khoản 4)",
+      "name": "manhmanh2224s@gmail.com",
+      "email": "manhmanh2224s@gmail.com",
       "path": "./edge_profile_4",
-      "profile_directory": "Default"
+      "profile_directory": "Default",
+      "status": "ready"
     }
   ]
 }

@@ -162,6 +162,12 @@ def sync_profile_from_system(profile):
     """Tự động đồng bộ cookie/session từ Edge gốc của máy vào thư mục profile bot nếu có"""
     if not isinstance(profile, dict):
         return
+    p_id = str(profile.get("id", ""))
+    # Chỉ đồng bộ từ Edge hệ thống nếu là 3 profile ban đầu (1, 2, 3) hoặc có cờ sync_from_system=True.
+    # Tuyệt đối KHÔNG đồng bộ cho các profile mới tạo (4, 5, 6...) tránh làm ô nhiễm session của tài khoản 1!
+    if p_id not in ["1", "2", "3"] and not profile.get("sync_from_system"):
+        return
+
     profile_dir_name = profile.get("profile_directory")
     if not profile_dir_name:
         return
@@ -175,12 +181,14 @@ def sync_profile_from_system(profile):
     dst_profile = os.path.join(target_dir, profile_dir_name)
     os.makedirs(os.path.join(dst_profile, "Network"), exist_ok=True)
 
-    # 1. Đồng bộ Local State (chỉ chép nếu chưa có)
+    # 1. Đồng bộ Local State (chép nếu chưa có hoặc nếu dst_profile chưa có Cookies để đảm bảo khớp os_crypt key)
     local_state_src = os.path.join(user_data, "Local State")
     local_state_dst = os.path.join(target_dir, "Local State")
+    c_dst = os.path.join(dst_profile, "Network", "Cookies")
     try:
-        if os.path.exists(local_state_src) and not os.path.exists(local_state_dst):
-            shutil.copy2(local_state_src, local_state_dst)
+        if os.path.exists(local_state_src):
+            if not os.path.exists(local_state_dst) or not os.path.exists(c_dst):
+                shutil.copy2(local_state_src, local_state_dst)
     except Exception:
         pass
 
@@ -194,14 +202,15 @@ def sync_profile_from_system(profile):
             except Exception:
                 pass
 
-    # 3. Đồng bộ Cookies nếu chưa có
-    c_src = os.path.join(src_profile, "Network", "Cookies")
-    c_dst = os.path.join(dst_profile, "Network", "Cookies")
-    if os.path.exists(c_src) and not os.path.exists(c_dst):
-        try:
-            shutil.copy2(c_src, c_dst)
-        except Exception:
-            pass
+    # 3. Đồng bộ Cookies & Network files nếu chưa có
+    for cname in ["Cookies", "Cookies-journal", "Network Persistent State"]:
+        c_src = os.path.join(src_profile, "Network", cname)
+        c_dest = os.path.join(dst_profile, "Network", cname)
+        if os.path.exists(c_src) and not os.path.exists(c_dest):
+            try:
+                shutil.copy2(c_src, c_dest)
+            except Exception:
+                pass
 
 
 def kill_zombie_edge_processes(profile_dir=None):
@@ -253,10 +262,16 @@ def open_browser_for_login(target_profile, config=None):
     p_name = target_profile.get("name", "Profile")
     p_dir = get_profile_abs_path(target_profile)
     kill_zombie_edge_processes(p_dir)
+    email = target_profile.get("email") or ""
+    name = target_profile.get("name") or ""
+    status = target_profile.get("status") or ""
+    has_email = bool(status != "unlogged" and ("@" in email or ("@" in name and not name.startswith("Chưa đăng nhập"))))
+    target_url = "https://rewards.bing.com" if has_email else "https://login.live.com/login.srf?prompt=select_account"
+
     print(f"\n{'='*65}")
     print(f"🔑 ĐANG MỞ MICROSOFT EDGE CHO [{p_name}]")
     print(f"   Thư mục Profile: {p_dir}")
-    print(f"   Trang đích: https://rewards.bing.com")
+    print(f"   Trang đích: {target_url}")
     print("   👉 Hãy đăng nhập hoặc kiểm tra điểm. Đóng cửa sổ Edge khi hoàn tất.")
     print(f"{'='*65}\n")
 
@@ -271,7 +286,8 @@ def open_browser_for_login(target_profile, config=None):
         f"--user-data-dir={p_dir}",
         "--no-first-run",
         "--no-default-browser-check",
-        "https://rewards.bing.com"
+        "--disable-features=msImplicitSignin,msEdgeSingleSignOn,WebAccountManager",
+        target_url
     ]
     if isinstance(target_profile, dict) and target_profile.get("profile_directory"):
         cmd.append(f"--profile-directory={target_profile['profile_directory']}")
@@ -303,7 +319,8 @@ def create_edge_driver(is_mobile=False, config=None, profile_target=None):
     if isinstance(target_prof, dict) and target_prof.get("profile_directory"):
         options.add_argument(f"--profile-directory={target_prof['profile_directory']}")
 
-    # 2. Cờ tắt chế độ Automation & Chống Bot Detection
+    # 2. Cờ tắt chế độ Automation, chống Single Sign-On ngầm & Chống Bot Detection
+    options.add_argument("--disable-features=msImplicitSignin,msEdgeSingleSignOn,WebAccountManager")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     options.add_experimental_option("useAutomationExtension", False)

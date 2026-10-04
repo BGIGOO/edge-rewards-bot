@@ -44,6 +44,8 @@ from edge_rewards_bot import (
     kill_zombie_edge_processes,
     open_browser_for_login
 )
+import db
+db.init_db()
 
 
 class BotTaskManager:
@@ -211,106 +213,131 @@ async def get_status(request):
     })
 
 
+def get_edge_account_email(profile_dict):
+    """Tự động phát hiện email tài khoản Microsoft/Edge đã đăng nhập trong thư mục profile"""
+    try:
+        pdir = get_profile_abs_path(profile_dict)
+        pdir_name = profile_dict.get("profile_directory", "Default")
+
+        # 1. Kiểm tra trong chính thư mục bot profile (Local State)
+        ls_path = os.path.join(pdir, "Local State")
+        if os.path.exists(ls_path):
+            try:
+                with open(ls_path, "r", encoding="utf-8", errors="ignore") as f:
+                    ls = json.load(f)
+                    info_cache = ls.get("profile", {}).get("info_cache", {})
+                    if pdir_name in info_cache:
+                        u = info_cache[pdir_name].get("user_name")
+                        if u and "@" in u:
+                            return u
+            except Exception:
+                pass
+
+        # 2. Kiểm tra Preferences trong pdir_name hoặc thư mục Default của bot profile
+        for sub in [pdir_name, "Default"]:
+            pref_path = os.path.join(pdir, sub, "Preferences")
+            if os.path.exists(pref_path):
+                try:
+                    with open(pref_path, "r", encoding="utf-8", errors="ignore") as f:
+                        d = json.load(f)
+                        for a in d.get("account_info", []):
+                            em = a.get("email")
+                            if em and "@" in em:
+                                return em
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return None
+
+
 async def get_profiles(request):
-    """Lấy danh sách các profile và trạng thái"""
-    cfg = load_config()
-    profiles = cfg.get("profiles", [])
+    """Lấy danh sách các profile và trạng thái từ SQLite, tự động nhận diện email đã đăng nhập"""
+    profiles = db.get_all_profiles()
     result = []
+
     for p in profiles:
         p_dir = get_profile_abs_path(p)
         dir_exists = os.path.exists(p_dir)
+        email = get_edge_account_email(p)
+
+        name = p.get("name", "")
+        # Nếu phát hiện email hợp lệ đã đăng nhập mà profile chưa có email hoặc đang là unlogged
+        if email:
+            if not p.get("email") or p.get("status") == "unlogged" or name.startswith("Chưa đăng nhập"):
+                p["email"] = email
+                p["name"] = email
+                p["status"] = "ready"
+                db.update_profile_db(p["id"], name=email, email=email, status="ready")
+        else:
+            # Nếu chưa có email và tên không phải là email
+            if not p.get("email") and "@" not in name:
+                if p.get("status") != "unlogged":
+                    p["status"] = "unlogged"
+                    db.update_profile_db(p["id"], status="unlogged")
+
         result.append({
-            "id": p.get("id"),
-            "name": p.get("name", f"Profile {p.get('id')}"),
+            "id": str(p.get("id")),
+            "name": p.get("name"),
+            "email": p.get("email") or "",
             "path": p.get("path", ""),
             "profile_directory": p.get("profile_directory", "Default"),
+            "status": p.get("status", "ready"),
+            "total_points": p.get("total_points", 0),
+            "today_points": p.get("today_points", 0),
+            "last_run": p.get("last_run", ""),
             "exists": dir_exists
         })
+
     return JSONResponse(result)
 
 
 async def add_profile(request):
-    """Thêm tài khoản profile mới"""
+    """Thêm tài khoản profile mới vào SQLite và đồng bộ config"""
     data = await request.json()
-    cfg = load_config()
-    profiles = cfg.get("profiles", [])
-    
-    # Tự động tạo ID mới
-    existing_ids = [int(p.get("id")) for p in profiles if str(p.get("id", "")).isdigit()]
-    next_id = str(max(existing_ids) + 1) if existing_ids else "1"
-    
-    name = data.get("name") or f"Profile {next_id} (Tài khoản {next_id})"
+    name = data.get("name")
     custom_path = data.get("path")
-    if not custom_path:
-        custom_path = f"./edge_profile_{next_id}" if next_id != "1" else "./edge_profile"
+    prof_dir = data.get("profile_directory", "Default")
 
-    new_p = {
-        "id": next_id,
-        "name": name,
-        "path": custom_path,
-        "profile_directory": "Default"
-    }
-    profiles.append(new_p)
-    cfg["profiles"] = profiles
-
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
-
-    task_mgr.add_log(f"➕ [CẤU HÌNH] Đã thêm tài khoản mới: {name} ({custom_path})", "info")
+    new_p = db.add_profile_db(name=name, custom_path=custom_path, profile_directory=prof_dir)
+    task_mgr.add_log(f"➕ [CẤU HÌNH] Đã thêm tài khoản mới vào Database: {new_p['name']} ({new_p['path']})", "info")
     return JSONResponse({"status": "success", "profile": new_p})
 
 
 async def update_profile(request):
-    """Cập nhật thông tin profile"""
+    """Cập nhật thông tin profile trong SQLite"""
     p_id = request.path_params.get("id")
     data = await request.json()
-    cfg = load_config()
-    profiles = cfg.get("profiles", [])
-    
-    updated = False
-    for p in profiles:
-        if str(p.get("id")) == str(p_id):
-            if "name" in data and data["name"]:
-                p["name"] = data["name"]
-            if "path" in data and data["path"]:
-                p["path"] = data["path"]
-            updated = True
-            break
-
+    updated = db.update_profile_db(p_id, name=data.get("name"), custom_path=data.get("path"))
     if updated:
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
-        return JSONResponse({"status": "success"})
+        return JSONResponse({"status": "success", "profile": updated})
     return JSONResponse({"status": "not_found"}, status_code=404)
 
 
 async def delete_profile(request):
-    """Xóa profile khỏi danh sách"""
+    """Xóa profile khỏi SQLite"""
     p_id = request.path_params.get("id")
-    cfg = load_config()
-    profiles = cfg.get("profiles", [])
-    
-    new_profiles = [p for p in profiles if str(p.get("id")) != str(p_id)]
-    if len(new_profiles) == len(profiles):
+    success = db.delete_profile_db(p_id)
+    if not success:
         return JSONResponse({"status": "not_found"}, status_code=404)
 
-    cfg["profiles"] = new_profiles
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
-
-    task_mgr.add_log(f"🗑️ [CẤU HÌNH] Đã xóa Profile ID {p_id} khỏi danh sách.", "warn")
+    task_mgr.add_log(f"🗑️ [CẤU HÌNH] Đã xóa Profile ID #{p_id} khỏi Database.", "warn")
     return JSONResponse({"status": "success"})
 
 
 async def unlock_profile(request):
     """Mở khóa và dọn dẹp tiến trình zombie cho profile"""
     p_id = request.path_params.get("id")
-    cfg = load_config()
-    matched = [p for p in cfg.get("profiles", []) if str(p.get("id")) == str(p_id)]
-    if matched:
-        p_dir = get_profile_abs_path(matched[0])
+    target = db.get_profile_by_id(p_id)
+    if not target:
+        cfg = load_config()
+        matched = [p for p in cfg.get("profiles", []) if str(p.get("id")) == str(p_id)]
+        if matched:
+            target = matched[0]
+    if target:
+        p_dir = get_profile_abs_path(target)
         kill_zombie_edge_processes(p_dir)
-        task_mgr.add_log(f"🧹 [DỌN DẸP] Đã giải phóng lock file & đóng tiến trình treo cho {matched[0].get('name')}.", "success")
+        task_mgr.add_log(f"🧹 [DỌN DẸP] Đã giải phóng lock file & đóng tiến trình treo cho {target.get('name')}.", "success")
         return JSONResponse({"status": "success"})
     return JSONResponse({"status": "not_found"}, status_code=404)
 
@@ -318,22 +345,30 @@ async def unlock_profile(request):
 async def login_profile(request):
     """Mở trình duyệt Edge với GUI để người dùng đăng nhập tài khoản / kiểm tra điểm"""
     p_id = request.path_params.get("id")
-    cfg = load_config()
-    matched = [p for p in cfg.get("profiles", []) if str(p.get("id")) == str(p_id)]
-    if not matched:
+    target_profile = db.get_profile_by_id(p_id)
+    if not target_profile:
+        cfg = load_config()
+        matched = [p for p in cfg.get("profiles", []) if str(p.get("id")) == str(p_id)]
+        if matched:
+            target_profile = matched[0]
+    if not target_profile:
         return JSONResponse({"status": "not_found"}, status_code=404)
 
-    target_profile = matched[0]
     task_mgr.add_log(f"🔑 [ĐĂNG NHẬP] Đang mở trình duyệt Edge cho {target_profile.get('name')}...", "start")
 
     # Mở Edge độc lập trong tiến trình nền không chặn
-    proc = open_browser_for_login(target_profile, config=cfg)
+    proc = open_browser_for_login(target_profile)
     if proc:
         task_mgr.add_log(f"👉 [ĐĂNG NHẬP] Cửa sổ Edge đã mở. Hãy đăng nhập tài khoản và đóng cửa sổ khi xong.", "info")
         return JSONResponse({"status": "success", "message": "Edge opened"})
     else:
         task_mgr.add_log("❌ [LỖI] Không thể khởi động Microsoft Edge.", "error")
         return JSONResponse({"status": "error"}, status_code=500)
+
+
+async def get_history_endpoint(request):
+    """Lấy danh sách lịch sử chạy từ SQLite"""
+    return JSONResponse(db.get_recent_history(30))
 
 
 async def run_task(request):
@@ -351,11 +386,25 @@ async def run_task(request):
         return JSONResponse({"status": "error", "message": "Chưa có tài khoản nào được cấu hình!"}, status_code=400)
 
     if profile_choice == "all":
-        profiles_to_run = profiles
+        profiles_to_run = [
+            p for p in profiles 
+            if p.get("status") != "unlogged" and ("@" in str(p.get("name", "")) or p.get("email"))
+        ]
+        if not profiles_to_run:
+            return JSONResponse({
+                "status": "error", 
+                "message": "Không có tài khoản nào đã đăng nhập! Vui lòng bấm 'Đăng nhập' cho ít nhất 1 tài khoản trước khi chạy."
+            }, status_code=400)
     else:
         matched = [p for p in profiles if str(p.get("id")) == str(profile_choice)]
         if not matched:
             return JSONResponse({"status": "error", "message": f"Không tìm thấy Profile {profile_choice}"}, status_code=404)
+        target = matched[0]
+        if target.get("status") == "unlogged" or not ("@" in str(target.get("name", "")) or target.get("email")):
+            return JSONResponse({
+                "status": "error",
+                "message": f"Tài khoản #{profile_choice} ({target.get('name')}) chưa đăng nhập! Vui lòng bấm 'Đăng nhập' trên bảng điều khiển trước."
+            }, status_code=400)
         profiles_to_run = matched
 
     # Khởi động background sequence
@@ -473,6 +522,40 @@ async def serve_index(request):
     return JSONResponse({"error": "Web UI index.html not found"}, status_code=404)
 
 
+cached_ip_info = {"ip": "1.52.0.121", "last_check": 0}
+
+async def get_metadata_endpoint(request):
+    """Lấy thông tin IP, Headers và Metadata môi trường chạy"""
+    now = time.time()
+    if now - cached_ip_info.get("last_check", 0) > 300:
+        try:
+            import urllib.request
+            req = urllib.request.Request("https://api.ipify.org?format=json", headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                data = json.loads(resp.read().decode())
+                if data.get("ip"):
+                    cached_ip_info["ip"] = data["ip"]
+                    cached_ip_info["last_check"] = now
+        except Exception:
+            pass
+
+    cfg = load_config()
+    search_cfg = cfg.get("search_settings", {})
+    return JSONResponse({
+        "ip": cached_ip_info.get("ip", "1.52.0.121"),
+        "location": "Vietnam (VN)",
+        "proxy": "Direct (None)",
+        "pc_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+        "mobile_user_agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 EdgA/131.0.0.0",
+        "delay": f"{search_cfg.get('min_delay_seconds', 12)}s - {search_cfg.get('max_delay_seconds', 22)}s",
+        "client_hints": {
+            "sec-ch-ua": '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"'
+        }
+    })
+
+
 # Thiết lập các routes
 routes = [
     Route("/", serve_index),
@@ -490,6 +573,8 @@ routes = [
     Route("/api/keywords", get_keywords_endpoint, methods=["GET", "POST"]),
     Route("/api/logs", get_logs_endpoint, methods=["GET"]),
     Route("/api/logs/clear", clear_logs_endpoint, methods=["POST"]),
+    Route("/api/history", get_history_endpoint, methods=["GET"]),
+    Route("/api/metadata", get_metadata_endpoint, methods=["GET"]),
     WebSocketRoute("/ws/logs", websocket_logs),
 ]
 

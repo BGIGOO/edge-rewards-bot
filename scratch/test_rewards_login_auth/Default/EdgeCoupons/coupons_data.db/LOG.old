@@ -1,0 +1,5 @@
+2026/10/04-19:05:53.382 1438 Creating DB D:\Hoc_Tap\file_vs_code\auto_microsoft\scratch\test_rewards_login_auth\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/10/04-19:05:53.386 1438 Reusing MANIFEST D:\Hoc_Tap\file_vs_code\auto_microsoft\scratch\test_rewards_login_auth\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/10/04-19:05:53.519 32dc Level-0 table #5: started
+2026/10/04-19:05:53.521 32dc Level-0 table #5: 683273 bytes OK
+2026/10/04-19:05:53.523 32dc Delete type=0 #3

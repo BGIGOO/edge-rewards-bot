@@ -1,7 +1,6 @@
 /**
- * REWARDS POP HUB - CLIENT APPLICATION ARCHITECTURE
- * Style: Playful Geometric Design System (Neo-Pop / Memphis Sticker Vibe)
- * Warm Cream Paper Canvas • Hard Pop Shadows • Candy Buttons
+ * MICROSOFT REWARDS AUTO - CLIENT APPLICATION
+ * Minimalist, high-performance, clutter-free dashboard architecture
  */
 
 let appState = {
@@ -9,11 +8,16 @@ let appState = {
   isRunning: false,
   currentTask: null,
   ws: null,
-  reconnectTimer: null
+  reconnectTimer: null,
+  publicIp: "1.52.0.121",
+  liveSearches: {
+    desktopCount: 0,
+    mobileCount: 0
+  }
 };
 
 // DOM References
-const profilesGrid = document.getElementById("profilesGrid");
+const profilesListBody = document.getElementById("profilesListBody") || document.getElementById("profilesGrid");
 const profileCountDisplay = document.getElementById("profileCountDisplay");
 const profilesBadge = document.getElementById("profilesBadge");
 const connectionStatus = document.getElementById("connectionStatus");
@@ -26,6 +30,23 @@ const activeAccountNotice = document.getElementById("activeAccountNotice");
 const kpiEngineStatus = document.getElementById("kpiEngineStatus");
 const kpiEngineSub = document.getElementById("kpiEngineSub");
 const logCounter = document.getElementById("logCounter");
+
+// Inspector & Points Breakdown DOM References
+const pointsProfileSelect = document.getElementById("pointsProfileSelect");
+const pbTodayPoints = document.getElementById("pbTodayPoints");
+const pbDesktopEarned = document.getElementById("pbDesktopEarned");
+const pbDesktopBar = document.getElementById("pbDesktopBar");
+const pbMobileEarned = document.getElementById("pbMobileEarned");
+const pbMobileBar = document.getElementById("pbMobileBar");
+const pbOffersEarned = document.getElementById("pbOffersEarned");
+
+const metaModeBadge = document.getElementById("metaModeBadge");
+const metaIpAddress = document.getElementById("metaIpAddress");
+const metaDelay = document.getElementById("metaDelay");
+const metaViewport = document.getElementById("metaViewport");
+const metaUserAgent = document.getElementById("metaUserAgent");
+const hintPlatform = document.getElementById("hintPlatform");
+const hintMobile = document.getElementById("hintMobile");
 
 // Bottom Resizable Terminal DOM References
 const terminalSection = document.getElementById("terminalSection");
@@ -71,9 +92,17 @@ const btnSeedKeywords = document.getElementById("btnSeedKeywords");
 document.addEventListener("DOMContentLoaded", () => {
   initTerminalControls();
   initWebSocket();
+  initPublicIp();
   loadProfiles();
   loadStatus();
+  recoverLiveSearchesFromLogs();
   setupEventListeners();
+
+  if (pointsProfileSelect) {
+    pointsProfileSelect.addEventListener("change", () => {
+      updateInspectorPointsUI();
+    });
+  }
 
   // Poll status every 3 seconds to keep UI in sync
   setInterval(loadStatus, 3000);
@@ -81,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ====================================================================
-// WEBSOCKET LOG STREAMING (Retro-Arcade Terminal Engine)
+// WEBSOCKET LOG STREAMING
 // ====================================================================
 function initWebSocket() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -154,6 +183,22 @@ function appendLogLine(entry) {
     previewText.className = `preview-text preview-${entry.type || "info"}`;
   }
 
+  // Live Points Parser from streaming bot logs
+  if (entry.text) {
+    const pcMatch = entry.text.match(/\[(?:PC|Desktop)\s*#?(\d+)\/(\d+)\]/i);
+    if (pcMatch) {
+      const currentPc = parseInt(pcMatch[1], 10);
+      appState.liveSearches.desktopCount = Math.max(appState.liveSearches.desktopCount, currentPc);
+      updateInspectorPointsUI();
+    }
+    const mobMatch = entry.text.match(/\[Mobile\s*#?(\d+)\/(\d+)\]/i);
+    if (mobMatch) {
+      const currentMob = parseInt(mobMatch[1], 10);
+      appState.liveSearches.mobileCount = Math.max(appState.liveSearches.mobileCount, currentMob);
+      updateInspectorPointsUI();
+    }
+  }
+
   terminalLogBody.appendChild(lineDiv);
 
   // Buffer retention: Keep last 600 lines
@@ -162,7 +207,7 @@ function appendLogLine(entry) {
   }
 
   if (logCounter) {
-    logCounter.innerText = `${terminalLogBody.children.length} entries`;
+    logCounter.innerText = `${terminalLogBody.children.length} dòng`;
   }
 
   if (chkAutoScroll.checked) {
@@ -172,7 +217,7 @@ function appendLogLine(entry) {
 
 
 // ====================================================================
-// PROFILES STICKER CARDS RENDERING (Confetti Color Rotation)
+// PROFILES LIST RENDERING (Clean Minimalist Table Rows)
 // ====================================================================
 async function loadProfiles() {
   try {
@@ -181,9 +226,12 @@ async function loadProfiles() {
     const data = await res.json();
     appState.profiles = data;
     renderProfiles(data);
+    populatePointsProfileSelect();
   } catch (err) {
     console.error("Lỗi nạp profiles:", err);
-    profilesGrid.innerHTML = `<div class="loading-state">Không thể tải danh sách tài khoản: ${err.message}</div>`;
+    if (profilesListBody) {
+      profilesListBody.innerHTML = `<tr><td colspan="5" class="loading-state">Không thể tải danh sách tài khoản: ${err.message}</td></tr>`;
+    }
   }
 }
 
@@ -192,101 +240,129 @@ function renderProfiles(profiles) {
     profileCountDisplay.innerText = profiles.length;
   }
   if (profilesBadge) {
-    profilesBadge.innerText = `${profiles.length} PROFILES`;
+    profilesBadge.innerText = `${profiles.length} tài khoản`;
   }
 
+  if (!profilesListBody) return;
+
   if (!profiles || profiles.length === 0) {
-    profilesGrid.innerHTML = `
-      <div class="loading-state">
-        <p>Chưa có tài khoản nào được cấu hình.</p>
-        <button class="btn btn-candy btn-sm mt-2" onclick="openAddProfileModal()">+ Thêm Tài Khoản Đầu Tiên</button>
-      </div>`;
+    profilesListBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty-state">
+          <p>Chưa có tài khoản nào được cấu hình.</p>
+          <button class="btn btn-primary btn-sm mt-2" onclick="openAddProfileModal()">+ Thêm Tài Khoản Đầu Tiên</button>
+        </td>
+      </tr>`;
     return;
   }
 
-  profilesGrid.innerHTML = "";
-
-  // Hand-Drawn Post-It & Marker Color Palettes for Account Badges
-  const avatarColors = ["#fef08a", "#fbcfe8", "#d1fae5", "#bae6fd"];
-  const avatarTextColors = ["#854d0e", "#9d174d", "#065f46", "#0369a1"];
+  profilesListBody.innerHTML = "";
 
   profiles.forEach((p, idx) => {
     const isThisRunning = appState.isRunning && appState.currentTask && String(appState.currentTask.profile_id) === String(p.id);
-    const card = document.createElement("div");
-    card.className = `profile-sticker-card ${isThisRunning ? "running" : ""}`;
-    card.id = `profile-card-${p.id}`;
+    const row = document.createElement("tr");
+    row.className = `profile-row ${isThisRunning ? "is-running" : ""}`;
+    row.id = `profile-row-${p.id}`;
 
-    const statusClass = isThisRunning ? "status-running" : "status-ready";
-    const statusText = isThisRunning ? "ĐANG TÌM KIẾM" : "SẴN SÀNG";
+    const hasEmail = Boolean(p.email || (p.name && p.name.includes("@")));
+    const isUnlogged = p.status === "unlogged" || !hasEmail;
 
-    const colIdx = idx % 4;
-    const bgCol = avatarColors[colIdx] || "#fef08a";
-    const txtCol = avatarTextColors[colIdx] || "#854d0e";
+    let statusClass = "status-ready";
+    let statusText = "Sẵn sàng";
 
-    // Action segments: If this profile is running, show prominent "🛑 DỪNG TÌM KIẾM" button!
-    let segmentsHtml = "";
     if (isThisRunning) {
-      segmentsHtml = `
-        <div class="card-run-segments running-mode">
-          <button class="btn btn-stop-running-task" onclick="stopProfile('${p.id}')" title="Dừng ngay lượt tìm kiếm của tài khoản này">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
-            <span>🛑 DỪNG TÌM KIẾM (ACC #${p.id})</span>
+      statusClass = "status-running";
+      statusText = `Đang chạy (${(appState.currentTask?.mode || "").toUpperCase()})`;
+    } else if (isUnlogged) {
+      statusClass = "status-unlogged";
+      statusText = "Chưa đăng nhập";
+    }
+
+    // Quick run buttons or Stop button if running
+    let runCellHtml = "";
+    if (isThisRunning) {
+      runCellHtml = `
+        <button class="btn btn-xs btn-stop-running" onclick="stopProfile('${p.id}')" title="Dừng ngay lượt tìm kiếm của tài khoản này">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+          <span>Dừng Acc #${p.id}</span>
+        </button>
+      `;
+    } else if (isUnlogged) {
+      runCellHtml = `
+        <div class="run-buttons-group">
+          <button class="btn btn-xs btn-outline" data-unlogged="true" disabled title="Tài khoản chưa đăng nhập, vui lòng bấm 'Đăng nhập'">
+            PC
+          </button>
+          <button class="btn btn-xs btn-outline" data-unlogged="true" disabled title="Tài khoản chưa đăng nhập, vui lòng bấm 'Đăng nhập'">
+            Mobile
+          </button>
+          <button class="btn btn-xs btn-primary-soft" data-unlogged="true" disabled title="Tài khoản chưa đăng nhập, vui lòng bấm 'Đăng nhập'">
+            Full (52)
           </button>
         </div>
       `;
     } else {
       const isOtherRunning = appState.isRunning;
-      segmentsHtml = `
-        <div class="card-run-segments">
-          <button class="btn btn-segment" onclick="runSingleProfile('${p.id}', 'desktop')" ${isOtherRunning ? "disabled" : ""} title="Tìm kiếm Desktop (31 lượt)">
-            🖥️ PC (31)
+      runCellHtml = `
+        <div class="run-buttons-group">
+          <button class="btn btn-xs btn-outline" onclick="runSingleProfile('${p.id}', 'desktop')" ${isOtherRunning ? "disabled" : ""} title="Tìm kiếm Desktop (31 lượt)">
+            PC
           </button>
-          <button class="btn btn-segment" onclick="runSingleProfile('${p.id}', 'mobile')" ${isOtherRunning ? "disabled" : ""} title="Tìm kiếm Mobile (21 lượt)">
-            📱 Mob (21)
+          <button class="btn btn-xs btn-outline" onclick="runSingleProfile('${p.id}', 'mobile')" ${isOtherRunning ? "disabled" : ""} title="Tìm kiếm Mobile (21 lượt)">
+            Mobile
           </button>
-          <button class="btn btn-segment btn-segment-full" onclick="runSingleProfile('${p.id}', 'all')" ${isOtherRunning ? "disabled" : ""} title="Chạy cả Desktop và Mobile">
-            ⚡ Full (52)
+          <button class="btn btn-xs btn-primary-soft" onclick="runSingleProfile('${p.id}', 'all')" ${isOtherRunning ? "disabled" : ""} title="Chạy cả Desktop và Mobile">
+            Full (52)
           </button>
         </div>
       `;
     }
 
-    card.innerHTML = `
-      <div class="tape-strip"></div>
-      <div class="card-identity-row">
-        <div class="identity-left">
-          <div class="profile-avatar-pill" style="background-color: ${bgCol}; color: ${txtCol};">#${p.id}</div>
-          <div class="identity-text">
-            <span class="account-name-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
-            <span class="account-path-code">${escapeHtml(p.path)}</span>
-          </div>
+    const nameDisplay = escapeHtml(p.name);
+    const pathDisplay = escapeHtml(p.path);
+
+    row.innerHTML = `
+      <td class="col-id">
+        <span class="id-badge">#${p.id}</span>
+      </td>
+      <td class="col-name">
+        <div class="account-cell">
+          <span class="account-name ${hasEmail ? "is-email" : "not-login"}" title="${nameDisplay}">
+            ${hasEmail ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px; color: var(--primary);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>` : ""}
+            ${nameDisplay}
+          </span>
+          <span class="account-path" title="${pathDisplay}">${pathDisplay}</span>
         </div>
-        <span class="card-status-pill ${statusClass}">${statusText}</span>
-      </div>
-
-      ${segmentsHtml}
-
-      <div class="card-utilities-row">
-        <button class="btn btn-login-edge" onclick="loginProfile('${p.id}')" title="Mở Edge độc lập để đăng nhập tài khoản lần đầu hoặc kiểm tra điểm">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-          <span>🔑 Đăng Nhập Edge</span>
-        </button>
-        <button class="btn-icon-circle danger-subtle" onclick="stopProfile('${p.id}')" title="Dừng tìm kiếm hoặc đóng tiến trình Edge của tài khoản này">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>
-        </button>
-        <button class="btn-icon-circle" onclick="unlockProfile('${p.id}')" title="Giải phóng file lock và đóng tiến trình treo nếu có">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-14 14l-2 2m18-18l-4 4m-10 10l-4 4m14-14l-2 2m-6 6l-2 2"></path></svg>
-        </button>
-        <button class="btn-icon-circle" onclick="openEditProfileModal('${p.id}', '${escapeHtml(p.name)}', '${escapeHtml(p.path)}')" title="Đổi tên hoặc thư mục lưu">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-        </button>
-        <button class="btn-icon-circle danger" onclick="deleteProfile('${p.id}')" title="Xóa tài khoản khỏi danh sách">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        </button>
-      </div>
+      </td>
+      <td class="col-status">
+        <span class="badge-status ${statusClass}">
+          <span class="status-dot"></span>
+          <span>${statusText}</span>
+        </span>
+      </td>
+      <td class="col-quick-run">
+        ${runCellHtml}
+      </td>
+      <td class="col-actions">
+        <div class="actions-group">
+          <button class="btn btn-xs btn-login ${isUnlogged ? 'btn-attention' : ''}" onclick="loginProfile('${p.id}')" title="Mở Edge độc lập để đăng nhập tài khoản hoặc kiểm tra điểm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+            <span>Đăng nhập</span>
+          </button>
+          <button class="btn-icon" onclick="unlockProfile('${p.id}')" title="Giải phóng file lock & đóng Edge treo">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+          </button>
+          <button class="btn-icon" onclick="openEditProfileModal('${p.id}', '${escapeHtml(p.name)}', '${escapeHtml(p.path)}')" title="Đổi tên hoặc thư mục lưu">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+          <button class="btn-icon danger" onclick="deleteProfile('${p.id}')" title="Xóa tài khoản khỏi danh sách">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </td>
     `;
 
-    profilesGrid.appendChild(card);
+    profilesListBody.appendChild(row);
   });
 }
 
@@ -308,7 +384,7 @@ async function loadStatus() {
 
     updateUIState();
 
-    // Nếu trạng thái hoạt động thay đổi, cập nhật ngay giao diện profile card để hiện/ẩn nút Dừng
+    // Nếu trạng thái hoạt động thay đổi, cập nhật ngay giao diện profile list
     if (wasRunning !== appState.isRunning || prevTaskId !== appState.currentTask?.profile_id) {
       if (appState.profiles && appState.profiles.length > 0) {
         renderProfiles(appState.profiles);
@@ -322,15 +398,8 @@ async function loadStatus() {
 function updateUIState() {
   if (appState.isRunning && appState.currentTask) {
     botStatusPill.className = "chip-status running";
-    botStatusText.innerText = `Active: ${appState.currentTask.profile_name || "Profile"}`;
+    botStatusText.innerText = `Đang chạy: ${appState.currentTask.profile_name || "Profile"}`;
 
-    if (kpiEngineStatus) {
-      kpiEngineStatus.innerText = "RUNNING";
-      kpiEngineStatus.className = "chip-val text-pink";
-    }
-    if (kpiEngineSub) {
-      kpiEngineSub.innerText = `ACC ${appState.currentTask.current_index}/${appState.currentTask.total_profiles}`;
-    }
     if (activeAccountNotice) {
       activeAccountNotice.innerText = `Đang chạy: ${appState.currentTask.profile_name} (Chế độ: ${appState.currentTask.mode.toUpperCase()})`;
     }
@@ -341,15 +410,8 @@ function updateUIState() {
     btnStopAll.disabled = false;
   } else {
     botStatusPill.className = "chip-status idle";
-    botStatusText.innerText = "Ready (Idle)";
+    botStatusText.innerText = "Sẵn sàng (Idle)";
 
-    if (kpiEngineStatus) {
-      kpiEngineStatus.innerText = "READY";
-      kpiEngineStatus.className = "chip-val text-mint";
-    }
-    if (kpiEngineSub) {
-      kpiEngineSub.innerText = "WAITING";
-    }
     if (activeAccountNotice) {
       activeAccountNotice.innerText = "Sẵn sàng nhận lệnh điều khiển";
     }
@@ -360,10 +422,54 @@ function updateUIState() {
     btnStopAll.disabled = true;
   }
 
-  // Update button states inside cards
-  const segmentButtons = profilesGrid.querySelectorAll(".btn-segment");
-  segmentButtons.forEach(btn => {
-    btn.disabled = appState.isRunning;
+  // Update Live Session & Metadata Inspector
+  const task = appState.currentTask;
+  const isRunning = appState.isRunning && Boolean(task);
+
+  if (metaModeBadge) {
+    if (isRunning) {
+      const modeStr = (task.mode || "").toUpperCase();
+      let modeName = `Đang chạy: ${modeStr}`;
+      if (task.mode === "desktop") modeName = "🖥️ PC Search (31 lượt)";
+      else if (task.mode === "mobile") modeName = "📱 Mobile Search (21 lượt)";
+      else if (task.mode === "all") modeName = "🚀 Full (PC + Mobile)";
+      metaModeBadge.className = "meta-chip chip-running";
+      metaModeBadge.innerText = modeName;
+    } else {
+      metaModeBadge.className = "meta-chip chip-idle";
+      metaModeBadge.innerText = "💤 Sẵn sàng (Idle)";
+    }
+  }
+
+  if (isRunning) {
+    if (task.mode === "mobile") {
+      if (metaUserAgent) metaUserAgent.innerText = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 EdgA/131.0.0.0";
+      if (metaViewport) metaViewport.innerText = "412 × 915 (Google Pixel 7)";
+      if (hintPlatform) hintPlatform.innerText = '"Android"';
+      if (hintMobile) hintMobile.innerText = "?1";
+    } else {
+      if (metaUserAgent) metaUserAgent.innerText = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0";
+      if (metaViewport) metaViewport.innerText = "1920 × 1080 (Desktop PC)";
+      if (hintPlatform) hintPlatform.innerText = '"Windows"';
+      if (hintMobile) hintMobile.innerText = "?0";
+    }
+  } else {
+    if (metaUserAgent) metaUserAgent.innerText = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0";
+    if (metaViewport) metaViewport.innerText = "1920 × 1080";
+    if (hintPlatform) hintPlatform.innerText = '"Windows"';
+    if (hintMobile) hintMobile.innerText = "?0";
+  }
+
+  updateInspectorPointsUI();
+
+  // Update button states inside list rows
+  const runButtons = document.querySelectorAll(".run-buttons-group .btn");
+  runButtons.forEach(btn => {
+    if (btn.dataset.unlogged === "true") {
+      btn.disabled = true;
+    } else {
+      btn.disabled = appState.isRunning;
+    }
   });
 }
 
@@ -408,6 +514,12 @@ async function runTask(profileId, mode) {
 }
 
 function runSingleProfile(profileId, mode) {
+  const profile = appState.profiles.find(p => String(p.id) === String(profileId));
+  const hasEmail = profile && (profile.email || (profile.name && profile.name.includes("@")));
+  if (profile && (profile.status === "unlogged" || !hasEmail)) {
+    alert(`Tài khoản #${profileId} chưa đăng nhập!\nVui lòng bấm nút 'Đăng nhập' màu cam để đăng nhập Microsoft trước khi chạy bot.`);
+    return;
+  }
   runTask(profileId, mode);
 }
 
@@ -431,7 +543,17 @@ async function loginProfile(profileId) {
     const res = await fetch(`/api/profiles/${profileId}/login`, { method: "POST" });
     const data = await res.json();
     if (res.ok) {
-      alert("✅ Cửa sổ Microsoft Edge đã được mở độc lập!\n\nBạn hãy đăng nhập tài khoản Microsoft trên cửa sổ đó. Khi xong, hãy đóng cửa sổ Edge lại.");
+      alert("✅ Cửa sổ Microsoft Edge đã được mở độc lập!\n\n1. Hãy đăng nhập tài khoản Microsoft trên cửa sổ đó.\n2. Sau khi xong, hãy ĐÓNG CỬA SỔ EDGE lại.\n3. Hệ thống sẽ tự động cập nhật email tài khoản vào danh sách.");
+      // Bắt đầu theo dõi định kỳ để tự cập nhật giao diện khi người dùng đăng nhập xong
+      let checkCount = 0;
+      const pollInterval = setInterval(async () => {
+        checkCount++;
+        await loadProfiles();
+        const p = appState.profiles.find(item => String(item.id) === String(profileId));
+        if ((p && p.status === "ready" && (p.email || (p.name && p.name.includes("@")))) || checkCount > 30) {
+          clearInterval(pollInterval);
+        }
+      }, 3000);
     } else {
       alert(`[Lỗi] ${data.message || "Không thể mở Edge"}`);
     }
@@ -878,4 +1000,113 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+
+// ====================================================================
+// POINTS BREAKDOWN & SESSION METADATA INSPECTOR HELPERS
+// ====================================================================
+async function initPublicIp() {
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ip) {
+        appState.publicIp = data.ip;
+        if (metaIpAddress) metaIpAddress.innerText = data.ip;
+      }
+    }
+  } catch (e) {
+    // Keep fallback IP
+  }
+}
+
+async function recoverLiveSearchesFromLogs() {
+  try {
+    const res = await fetch("/api/logs");
+    if (res.ok) {
+      const logs = await res.json();
+      logs.forEach(l => {
+        const text = l.text || "";
+        const pcMatch = text.match(/\[(?:PC|Desktop)\s*#?(\d+)\/(\d+)\]/i);
+        if (pcMatch) {
+          appState.liveSearches.desktopCount = Math.max(appState.liveSearches.desktopCount, parseInt(pcMatch[1], 10));
+        }
+        const mobMatch = text.match(/\[Mobile\s*#?(\d+)\/(\d+)\]/i);
+        if (mobMatch) {
+          appState.liveSearches.mobileCount = Math.max(appState.liveSearches.mobileCount, parseInt(mobMatch[1], 10));
+        }
+      });
+      updateInspectorPointsUI();
+    }
+  } catch (e) {}
+}
+
+function populatePointsProfileSelect() {
+  if (!pointsProfileSelect) return;
+  const currentVal = pointsProfileSelect.value;
+  pointsProfileSelect.innerHTML = `<option value="live">● Đang chạy (Live Tracker)</option>`;
+  if (appState.profiles && appState.profiles.length > 0) {
+    appState.profiles.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.innerText = `Acc #${p.id} - ${p.name}`;
+      pointsProfileSelect.appendChild(opt);
+    });
+  }
+  if (currentVal && Array.from(pointsProfileSelect.options).some(o => o.value === currentVal)) {
+    pointsProfileSelect.value = currentVal;
+  }
+  updateInspectorPointsUI();
+}
+
+function updateInspectorPointsUI() {
+  const selectVal = pointsProfileSelect ? pointsProfileSelect.value : "live";
+  let desktopEarned = 0;
+  let mobileEarned = 0;
+  let offersEarned = 655;
+  let todayTotal = 0;
+
+  if (selectVal === "live") {
+    desktopEarned = Math.min(90, appState.liveSearches.desktopCount * 3);
+    mobileEarned = Math.min(60, appState.liveSearches.mobileCount * 3);
+    todayTotal = desktopEarned + mobileEarned + (desktopEarned > 0 || mobileEarned > 0 ? offersEarned : 0);
+  } else {
+    const profile = appState.profiles.find(p => String(p.id) === String(selectVal));
+    if (profile) {
+      todayTotal = profile.today_points || 0;
+      desktopEarned = profile.desktop_points || (todayTotal >= 90 ? 90 : Math.min(90, todayTotal));
+      mobileEarned = profile.mobile_points || (todayTotal > 90 ? Math.min(60, todayTotal - 90) : 0);
+      offersEarned = profile.offers_points || Math.max(0, todayTotal - desktopEarned - mobileEarned);
+    }
+  }
+
+  if (pbTodayPoints) pbTodayPoints.innerText = todayTotal;
+  if (pbDesktopEarned) pbDesktopEarned.innerText = desktopEarned;
+  if (pbMobileEarned) pbMobileEarned.innerText = mobileEarned;
+  if (pbOffersEarned) pbOffersEarned.innerText = offersEarned;
+
+  if (pbDesktopBar) {
+    const pcPct = Math.min(100, Math.round((desktopEarned / 90) * 100));
+    pbDesktopBar.style.width = `${pcPct}%`;
+  }
+  if (pbMobileBar) {
+    const mobPct = Math.min(100, Math.round((mobileEarned / 60) * 100));
+    pbMobileBar.style.width = `${mobPct}%`;
+  }
+}
+
+function copyUserAgent() {
+  const ua = document.getElementById("metaUserAgent")?.innerText?.trim() || "";
+  if (!ua) return;
+  navigator.clipboard.writeText(ua).then(() => {
+    const btn = document.getElementById("btnCopyUA");
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = `<span style="color: #10B981; font-weight: 700;">✓ Đã copy</span>`;
+      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }
+  }).catch(() => {
+    alert("Đã chép User-Agent vào clipboard!");
+  });
 }
