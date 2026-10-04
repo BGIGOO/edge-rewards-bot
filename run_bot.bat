@@ -16,6 +16,13 @@ if %ERRORLEVEL% neq 0 (
     exit /b
 )
 
+echo [*] Kiem tra thu vien can thiet...
+python -c "import selenium, webdriver_manager" >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo [*] Dang tu dong cai dat cac goi can thiet...
+    python -m pip install -r requirements.txt
+)
+
 echo --------------------------------------------------------------------
 echo CHON TAI KHOAN / PROFILE:
 echo [1] Profile 1 (Chinh)
