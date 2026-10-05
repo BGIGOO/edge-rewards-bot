@@ -49,7 +49,9 @@ def init_db():
     for col, c_type, def_v in [
         ("desktop_points", "TEXT", "'0/90'"),
         ("mobile_points", "TEXT", "'0/60'"),
-        ("offers_points", "INTEGER", "0")
+        ("offers_points", "INTEGER", "0"),
+        ("app_checkin_status", "TEXT", "'pending'"),
+        ("app_checkin_time", "TEXT", "''")
     ]:
         try:
             cursor.execute(f"ALTER TABLE profiles ADD COLUMN {col} {c_type} DEFAULT {def_v}")
@@ -69,6 +71,19 @@ def init_db():
             started_at TEXT,
             finished_at TEXT,
             log_summary TEXT
+        )
+    """)
+
+    # Bảng android_checkin_logs: Lịch sử điểm danh App Bing Android
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS android_checkin_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device TEXT,
+            status TEXT,
+            message TEXT,
+            frame_before TEXT,
+            frame_after TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()
@@ -287,6 +302,46 @@ def get_recent_history(limit=20):
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def save_android_checkin_result(status, message="", frame_before="", frame_after="", device="100.71.117.39:5555"):
+    """Lưu kết quả điểm danh Android vào SQLite và cập nhật trạng thái profile chính"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO android_checkin_logs 
+        (device, status, message, frame_before, frame_after)
+        VALUES (?, ?, ?, ?, ?)
+    """, (device, status, message, frame_before, frame_after))
+    
+    # Cập nhật trạng thái vào Profile 1 (Profile chính liên kết với App Bing)
+    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    cursor.execute("""
+        UPDATE profiles 
+        SET app_checkin_status = ?, app_checkin_time = ? 
+        WHERE id = 1
+    """, (status, now_str))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_latest_android_checkin():
+    """Lấy kết quả điểm danh Android gần nhất"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM android_checkin_logs ORDER BY id DESC LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return {
+        "status": "pending",
+        "message": "Chưa có lượt điểm danh nào hôm nay.",
+        "frame_before": "",
+        "frame_after": "",
+        "created_at": ""
+    }
 
 
 # Tự động khởi tạo DB và cấu trúc bảng khi import

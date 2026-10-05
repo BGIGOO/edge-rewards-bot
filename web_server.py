@@ -176,7 +176,101 @@ class BotTaskManager:
 
         self.is_running = False
         self.current_task_info = None
+
+        # Kiểm tra tự động điểm danh App Bing Android nếu được bật trong cấu hình
+        try:
+            cfg = load_config()
+            android_cfg = cfg.get("android_settings", {})
+            if android_cfg.get("enabled", True) and android_cfg.get("auto_checkin_after_search", True) and not self.stop_requested:
+                self.add_log("⏳ [HỆ THỐNG] Chuyển tiếp sang quy trình điểm danh tự động trên App Bing Android...", "action")
+                await asyncio.sleep(2)
+                await self.run_android_checkin()
+        except Exception as _ae:
+            self.add_log(f"⚠️ Không thể chạy tự động điểm danh Android: {_ae}", "warn")
+
         self.add_log("🎉 [HỆ THỐNG] Toàn bộ tác vụ đã kết thúc. Sẵn sàng cho phiên tiếp theo!\n", "success")
+
+    async def run_android_checkin(self, device=None, pin=None, package=None):
+        """Tiến trình thực thi điểm danh trên ứng dụng Microsoft Bing Android qua ADB Tailscale"""
+        if self.is_running:
+            self.add_log("⚠️ Một tiến trình bot khác đang chạy, vui lòng chờ...", "warn")
+            return False
+
+        self.is_running = True
+        self.stop_requested = False
+
+        cfg = load_config()
+        android_cfg = cfg.get("android_settings", {})
+        dev = device or android_cfg.get("device_address", "100.71.117.39:5555")
+        pkg = package or android_cfg.get("package_name", "com.microsoft.bing")
+        p_pin = pin or android_cfg.get("pin", "")
+
+        self.current_task_info = {
+            "profile_id": "android",
+            "profile_name": f"Bing App ({dev})",
+            "mode": "android_checkin",
+            "status": "running"
+        }
+
+        self.add_log("\n=======================================================", "info")
+        self.add_log(f"📱 [ANDROID] BẮT ĐẦU ĐIỂM DANH APP BING ({dev})", "start")
+        self.add_log("=======================================================", "info")
+
+        cmd = [
+            sys.executable,
+            "-u",
+            os.path.join(SCRIPT_DIR, "android_checkin.py"),
+            "--device", dev,
+            "--package", pkg
+        ]
+        if p_pin:
+            cmd.extend(["--pin", str(p_pin)])
+
+        success = False
+        try:
+            self.current_process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                cwd=SCRIPT_DIR
+            )
+
+            while True:
+                line = await self.current_process.stdout.readline()
+                if not line:
+                    break
+                decoded_line = line.decode("utf-8", errors="replace").rstrip()
+                if decoded_line:
+                    ltype = "info"
+                    if "[!]" in decoded_line or "Lỗi" in decoded_line or "Error" in decoded_line or "[X]" in decoded_line:
+                        ltype = "error"
+                    elif "[✓]" in decoded_line or "thành công" in decoded_line or "HOÀN TẤT" in decoded_line or "hoàn tất" in decoded_line:
+                        ltype = "success"
+                    elif "⏳" in decoded_line or "[*]" in decoded_line:
+                        ltype = "warn"
+                    elif "[📱]" in decoded_line or "Tap" in decoded_line or "Vuốt" in decoded_line:
+                        ltype = "action"
+                    self.add_log(decoded_line, ltype)
+
+            await self.current_process.wait()
+            code = self.current_process.returncode
+            success = (code == 0)
+
+            if success:
+                self.add_log("🎉 [THÀNH CÔNG] Đã hoàn thành điểm danh App Bing Android!", "success")
+                db.save_android_checkin_result("completed", "Điểm danh thành công!", "/static/android_checkin_before.png", "/static/android_checkin_after.png", dev)
+            else:
+                self.add_log(f"⚠️ Điểm danh Android kết thúc với mã {code}.", "warn")
+                db.save_android_checkin_result("failed", f"Kết thúc với mã {code}", "/static/android_checkin_before.png", "/static/android_checkin_after.png", dev)
+        except Exception as e:
+            self.add_log(f"❌ [LỖI TIẾN TRÌNH ANDROID] {e}", "error")
+            db.save_android_checkin_result("error", str(e), device=dev)
+        finally:
+            self.current_process = None
+            self.is_running = False
+            self.current_task_info = None
+
+        return success
 
     def stop_bot(self):
         self.stop_requested = True
@@ -498,28 +592,55 @@ async def stop_profile_task(request):
 
 
 async def get_config_endpoint(request):
-    """Lấy cấu hình tìm kiếm và browser"""
+    """Lấy cấu hình tìm kiếm, browser và android"""
     cfg = load_config()
     return JSONResponse({
         "search_settings": cfg.get("search_settings", {}),
-        "browser_settings": cfg.get("browser_settings", {})
+        "browser_settings": cfg.get("browser_settings", {}),
+        "android_settings": cfg.get("android_settings", {})
     })
 
 
 async def save_config_endpoint(request):
-    """Lưu cấu hình tìm kiếm và browser"""
+    """Lưu cấu hình tìm kiếm, browser và android"""
     data = await request.json()
     cfg = load_config()
     if "search_settings" in data:
         cfg["search_settings"].update(data["search_settings"])
     if "browser_settings" in data:
         cfg["browser_settings"].update(data["browser_settings"])
+    if "android_settings" in data:
+        if "android_settings" not in cfg:
+            cfg["android_settings"] = {}
+        cfg["android_settings"].update(data["android_settings"])
 
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2, ensure_ascii=False)
 
-    task_mgr.add_log("💾 [CẤU HÌNH] Đã cập nhật cài đặt tìm kiếm.", "info")
+    task_mgr.add_log("💾 [CẤU HÌNH] Đã cập nhật cài đặt hệ thống.", "info")
     return JSONResponse({"status": "success"})
+
+
+async def run_android_endpoint(request):
+    """Kích hoạt tiến trình điểm danh trên Android Bing App"""
+    if task_mgr.is_running:
+        return JSONResponse({"status": "error", "message": "Hệ thống đang bận thực hiện tác vụ khác!"}, status_code=400)
+    
+    asyncio.create_task(task_mgr.run_android_checkin())
+    return JSONResponse({"status": "success", "message": "Đã bắt đầu tiến trình điểm danh Android!"})
+
+
+async def get_android_status_endpoint(request):
+    """Lấy trạng thái và ảnh kết quả điểm danh Android gần nhất"""
+    latest = db.get_latest_android_checkin()
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    return JSONResponse({
+        "status": "success",
+        "config": android_cfg,
+        "latest": latest,
+        "is_running": (task_mgr.is_running and task_mgr.current_task_info and task_mgr.current_task_info.get("mode") == "android_checkin")
+    })
 
 
 async def get_keywords_endpoint(request):
@@ -631,6 +752,8 @@ routes = [
     Route("/api/logs", get_logs_endpoint, methods=["GET"]),
     Route("/api/logs/clear", clear_logs_endpoint, methods=["POST"]),
     Route("/api/history", get_history_endpoint, methods=["GET"]),
+    Route("/api/android/checkin", run_android_endpoint, methods=["POST"]),
+    Route("/api/android/status", get_android_status_endpoint, methods=["GET"]),
     Route("/api/metadata", get_metadata_endpoint, methods=["GET"]),
     WebSocketRoute("/ws/logs", websocket_logs),
 ]
@@ -646,8 +769,20 @@ if os.path.exists(WEB_DIR):
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 
+def free_port(port=5000):
+    """Tự động giải phóng port nếu có tiến trình cũ chiếm giữ"""
+    try:
+        ps_cmd = f"Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], capture_output=True, timeout=5)
+        time.sleep(0.5)
+    except Exception:
+        pass
+
+
 def main():
     port = 5000
+    free_port(port)
+
     print("=" * 65)
     print("🚀 MICROSOFT REWARDS AUTO BOT - WEB UI SERVER")
     print(f"👉 Đang chạy tại địa chỉ: http://127.0.0.1:{port}")
@@ -665,7 +800,14 @@ def main():
     import threading
     threading.Thread(target=open_browser, daemon=True).start()
     
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    try:
+        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    except Exception as e:
+        print(f"[!] Lỗi khởi động Uvicorn: {e}")
+        # Thử lại 1 lần sau khi ép giải phóng port
+        free_port(port)
+        time.sleep(1.0)
+        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 
 if __name__ == "__main__":

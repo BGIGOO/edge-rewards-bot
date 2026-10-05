@@ -95,6 +95,13 @@
           </svg>
           <span>Chỉ Mobile</span>
         </button>
+        <button id="btnRunAndroidCheckin" class="btn btn-secondary" title="Điểm danh ngay trên App Microsoft Bing (Android qua Tailscale)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>📱 Điểm Danh App Bing</span>
+        </button>
         <button id="btnStopAll" class="btn btn-danger" disabled title="Dừng ngay lập tức toàn bộ tác vụ bot">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
             <rect x="5" y="5" width="14" height="14" rx="2"></rect>
@@ -212,6 +219,23 @@
                 </div>
                 <div class="activity-score">
                   <strong id="pbOffersEarned">0</strong>
+                </div>
+              </div>
+
+              <!-- Android App Bing Check-in -->
+              <div class="activity-row" style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.12);">
+                <div class="activity-name">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                  </svg>
+                  <span>App Bing Check-in</span>
+                </div>
+                <div class="activity-score" style="display: flex; align-items: center; gap: 6px;">
+                  <span id="pbAndroidStatus" class="chip-status idle" style="font-size: 11px; padding: 2px 8px;">Chưa điểm danh</span>
+                  <button id="btnPreviewCheckinFrame" class="btn-xs-copy" title="Xem ảnh chụp màn hình điểm danh" onclick="openFrameModal()" style="display: inline-flex;">
+                    📷 Ảnh
+                  </button>
                 </div>
               </div>
             </div>
@@ -543,6 +567,33 @@
               </select>
             </div>
           </div>
+
+          <!-- Card 5: Android Check-in (Tailscale) -->
+          <div class="settings-section">
+            <h4 class="settings-section-title">📱 Điểm danh App Bing Android (Tailscale)</h4>
+            <div class="checkbox-group">
+              <input type="checkbox" id="cfgAndroidEnabled" class="custom-checkbox" checked>
+              <label for="cfgAndroidEnabled">Kích hoạt module điểm danh Android</label>
+            </div>
+            <div class="checkbox-group mt-2">
+              <input type="checkbox" id="cfgAndroidAutoRun" class="custom-checkbox" checked>
+              <label for="cfgAndroidAutoRun">Tự động điểm danh sau khi chạy xong PC & Mobile</label>
+            </div>
+            <div class="form-group mt-3">
+              <label>Địa chỉ ADB thiết bị (Tailscale IP:Port):</label>
+              <input type="text" id="cfgAndroidDevice" class="form-input" value="100.71.117.39:5555" placeholder="100.71.117.39:5555">
+            </div>
+            <div class="grid-2col mt-2">
+              <div class="form-group">
+                <label>Mã PIN mở khóa (nếu có):</label>
+                <input type="password" id="cfgAndroidPin" class="form-input" placeholder="Mã PIN số">
+              </div>
+              <div class="form-group">
+                <label>Package App:</label>
+                <input type="text" id="cfgAndroidPackage" class="form-input" value="com.microsoft.bing">
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -550,6 +601,37 @@
           <button type="submit" class="btn btn-primary">Lưu Cấu Hình</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ANDROID SCREEN PREVIEW -->
+  <div id="androidFrameModal" class="modal-backdrop hidden">
+    <div class="modal-box modal-wide" style="max-width: 820px;">
+      <div class="modal-header">
+        <div>
+          <h3>📷 Ảnh Màn Hình Điểm Danh Android</h3>
+          <p class="modal-subtitle">Đối soát thực tế màn hình điện thoại chụp qua ADB Tailscale.</p>
+        </div>
+        <button class="modal-close" onclick="closeFrameModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: center;">
+          <div style="background: #111827; border-radius: 12px; padding: 12px; border: 1px solid #374151;">
+            <div style="font-size: 13px; font-weight: 600; color: #9CA3AF; margin-bottom: 8px;">Trước khi bấm (Định vị nút)</div>
+            <img id="imgFrameBefore" src="/static/android_checkin_before.png" alt="Before Check-in" style="max-height: 480px; width: auto; max-width: 100%; border-radius: 8px; border: 1px solid #4B5563; object-fit: contain;" onerror="this.src='/static/android_checkin_before.png'">
+          </div>
+          <div style="background: #111827; border-radius: 12px; padding: 12px; border: 1px solid #374151;">
+            <div style="font-size: 13px; font-weight: 600; color: #10B981; margin-bottom: 8px;">Sau khi bấm (Đã có dấu tick)</div>
+            <img id="imgFrameAfter" src="/static/android_checkin_after.png" alt="After Check-in" style="max-height: 480px; width: auto; max-width: 100%; border-radius: 8px; border: 1px solid #10B981; object-fit: contain;" onerror="this.src='/static/android_checkin_after.png'">
+          </div>
+        </div>
+        <div id="frameDetails" style="margin-top: 14px; font-size: 13px; color: #D1D5DB; text-align: center;">
+          Đang tải thông tin điểm danh...
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeFrameModal()">Đóng</button>
+      </div>
     </div>
   </div>
 

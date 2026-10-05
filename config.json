@@ -18,6 +18,13 @@
     "headless": false,
     "mobile_device_name": "Pixel 7"
   },
+  "android_settings": {
+    "enabled": true,
+    "device_address": "100.71.117.39:5555",
+    "package_name": "com.microsoft.bing",
+    "pin": "",
+    "auto_checkin_after_search": true
+  },
   "profiles": [
     {
       "id": "1",

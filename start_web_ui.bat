@@ -31,9 +31,8 @@ echo ====================================================================
 echo.
 
 :: Tu dong giai phong port 5000 neu co tien trinh cu dang chiem giu
-for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr :5000 ^| findstr LISTENING') do (
-    taskkill /F /PID %%a >nul 2>nul
-)
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>nul
+timeout /t 1 /nobreak >nul 2>nul
 
 python web_server.py
 

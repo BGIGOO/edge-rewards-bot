@@ -84,6 +84,13 @@ def load_config():
             "headless": False,
             "mobile_device_name": "Pixel 7"
         },
+        "android_settings": {
+            "enabled": True,
+            "device_address": "100.71.117.39:5555",
+            "package_name": "com.microsoft.bing",
+            "pin": "",
+            "auto_checkin_after_search": True
+        },
         "profiles": [
             {
                 "id": "1",
@@ -103,6 +110,8 @@ def load_config():
                 loaded = json.load(f)
                 default_config["search_settings"].update(loaded.get("search_settings", {}))
                 default_config["browser_settings"].update(loaded.get("browser_settings", {}))
+                if "android_settings" in loaded:
+                    default_config["android_settings"].update(loaded.get("android_settings", {}))
                 if "profiles" in loaded and isinstance(loaded["profiles"], list):
                     default_config["profiles"] = loaded["profiles"]
         except Exception as e:

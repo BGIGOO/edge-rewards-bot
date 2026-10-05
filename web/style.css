@@ -1736,3 +1736,16 @@ body {
   color: #059669;
 }
 
+/* ====================================================================
+   ANDROID CHECK-IN FRAME PREVIEW MODAL
+   ==================================================================== */
+#androidFrameModal img {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+#androidFrameModal img:hover {
+  transform: scale(1.02);
+}
+
+

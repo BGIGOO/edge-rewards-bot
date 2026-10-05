@@ -63,12 +63,21 @@ const btnMaximizeTerminal = document.getElementById("btnMaximizeTerminal");
 const btnRunAllFull = document.getElementById("btnRunAllFull");
 const btnRunAllPC = document.getElementById("btnRunAllPC");
 const btnRunAllMobile = document.getElementById("btnRunAllMobile");
+const btnRunAndroidCheckin = document.getElementById("btnRunAndroidCheckin");
 const btnStopAll = document.getElementById("btnStopAll");
 const btnOpenAddProfile = document.getElementById("btnOpenAddProfile");
 const btnOpenSettings = document.getElementById("btnOpenSettings");
 const btnOpenKeywords = document.getElementById("btnOpenKeywords");
 const btnClearLogs = document.getElementById("btnClearLogs");
 const btnDownloadLogs = document.getElementById("btnDownloadLogs");
+
+// Android Check-in DOM References
+const pbAndroidStatus = document.getElementById("pbAndroidStatus");
+const btnPreviewCheckinFrame = document.getElementById("btnPreviewCheckinFrame");
+const androidFrameModal = document.getElementById("androidFrameModal");
+const imgFrameBefore = document.getElementById("imgFrameBefore");
+const imgFrameAfter = document.getElementById("imgFrameAfter");
+const frameDetails = document.getElementById("frameDetails");
 
 // Modals
 const profileModal = document.getElementById("profileModal");
@@ -97,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initPublicIp();
   loadProfiles();
   loadStatus();
+  loadAndroidStatus();
   recoverLiveSearchesFromLogs();
   setupEventListeners();
 
@@ -416,11 +426,12 @@ async function loadStatus() {
 
     updateUIState();
 
-    // Nếu trạng thái hoạt động thay đổi, cập nhật ngay giao diện profile list
+    // Nếu trạng thái hoạt động thay đổi, cập nhật ngay giao diện profile list và Android status
     if (wasRunning !== appState.isRunning || prevTaskId !== appState.currentTask?.profile_id) {
       if (appState.profiles && appState.profiles.length > 0) {
         renderProfiles(appState.profiles);
       }
+      loadAndroidStatus();
     }
   } catch (err) {
     console.error("Lỗi lấy status:", err);
@@ -730,6 +741,7 @@ async function openSettingsModal() {
     
     const sc = data.search_settings || {};
     const bc = data.browser_settings || {};
+    const ac = data.android_settings || {};
 
     document.getElementById("cfgPcSearches").value = sc.pc_searches || 31;
     document.getElementById("cfgMobileSearches").value = sc.mobile_searches || 21;
@@ -746,6 +758,19 @@ async function openSettingsModal() {
     if (bc.mobile_device_name) {
       document.getElementById("cfgMobileDevice").value = bc.mobile_device_name;
     }
+
+    // Android settings
+    const elAndroidEnabled = document.getElementById("cfgAndroidEnabled");
+    const elAndroidAuto = document.getElementById("cfgAndroidAutoRun");
+    const elAndroidDev = document.getElementById("cfgAndroidDevice");
+    const elAndroidPin = document.getElementById("cfgAndroidPin");
+    const elAndroidPkg = document.getElementById("cfgAndroidPackage");
+
+    if (elAndroidEnabled) elAndroidEnabled.checked = ac.enabled !== false;
+    if (elAndroidAuto) elAndroidAuto.checked = ac.auto_checkin_after_search !== false;
+    if (elAndroidDev) elAndroidDev.value = ac.device_address || "100.71.117.39:5555";
+    if (elAndroidPin) elAndroidPin.value = ac.pin || "";
+    if (elAndroidPkg) elAndroidPkg.value = ac.package_name || "com.microsoft.bing";
 
     settingsModal.classList.remove("hidden");
   } catch (err) {
@@ -775,6 +800,13 @@ settingsForm.addEventListener("submit", async (e) => {
     browser_settings: {
       headless: document.getElementById("cfgHeadless").checked,
       mobile_device_name: document.getElementById("cfgMobileDevice").value
+    },
+    android_settings: {
+      enabled: document.getElementById("cfgAndroidEnabled") ? document.getElementById("cfgAndroidEnabled").checked : true,
+      auto_checkin_after_search: document.getElementById("cfgAndroidAutoRun") ? document.getElementById("cfgAndroidAutoRun").checked : true,
+      device_address: document.getElementById("cfgAndroidDevice") ? document.getElementById("cfgAndroidDevice").value.trim() : "100.71.117.39:5555",
+      pin: document.getElementById("cfgAndroidPin") ? document.getElementById("cfgAndroidPin").value.trim() : "",
+      package_name: document.getElementById("cfgAndroidPackage") ? document.getElementById("cfgAndroidPackage").value.trim() : "com.microsoft.bing"
     }
   };
 
@@ -787,6 +819,7 @@ settingsForm.addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error("Failed to save config");
     closeSettingsModal();
     alert("💾 Cấu hình đã được lưu thành công!");
+    loadAndroidStatus();
   } catch (err) {
     alert(`Lỗi lưu cấu hình: ${err.message}`);
   }
@@ -1066,6 +1099,96 @@ function setupEventListeners() {
   btnOpenAddProfile.addEventListener("click", openAddProfileModal);
   btnOpenSettings.addEventListener("click", openSettingsModal);
   btnOpenKeywords.addEventListener("click", openKeywordsModal);
+
+  if (btnRunAndroidCheckin) {
+    btnRunAndroidCheckin.addEventListener("click", runAndroidCheckin);
+  }
+}
+
+// ====================================================================
+// ANDROID BING APP CHECK-IN HANDLERS
+// ====================================================================
+async function runAndroidCheckin() {
+  if (appState.isRunning) {
+    alert("⚠️ Hệ thống đang chạy tác vụ khác, vui lòng chờ!");
+    return;
+  }
+  if (!confirm("Bắt đầu điểm danh trên App Microsoft Bing (Android qua Tailscale)?")) {
+    return;
+  }
+  try {
+    if (btnRunAndroidCheckin) {
+      btnRunAndroidCheckin.disabled = true;
+      btnRunAndroidCheckin.innerHTML = `<span>⏳ Đang chạy...</span>`;
+    }
+    const res = await fetch("/api/android/checkin", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Lỗi khởi chạy");
+    loadStatus();
+  } catch (err) {
+    alert(`Lỗi điểm danh Android: ${err.message}`);
+  } finally {
+    setTimeout(() => {
+      if (btnRunAndroidCheckin) {
+        btnRunAndroidCheckin.disabled = false;
+        btnRunAndroidCheckin.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>📱 Điểm Danh App Bing</span>`;
+      }
+    }, 2000);
+  }
+}
+
+async function loadAndroidStatus() {
+  try {
+    const res = await fetch("/api/android/status");
+    if (!res.ok) return;
+    const data = await res.json();
+    const latest = data.latest || {};
+    const status = latest.status || "pending";
+
+    if (pbAndroidStatus) {
+      if (status === "completed") {
+        pbAndroidStatus.className = "chip-status connected";
+        pbAndroidStatus.innerText = "✓ Đã điểm danh";
+      } else if (status === "failed" || status === "error") {
+        pbAndroidStatus.className = "chip-status disconnected";
+        pbAndroidStatus.innerText = "! Lỗi/Chưa xong";
+      } else {
+        pbAndroidStatus.className = "chip-status idle";
+        pbAndroidStatus.innerText = "Chưa điểm danh";
+      }
+    }
+
+    if (btnPreviewCheckinFrame) {
+      btnPreviewCheckinFrame.style.display = (latest.frame_before || latest.frame_after) ? "inline-flex" : "none";
+    }
+
+    if (frameDetails) {
+      const timeStr = latest.created_at || "Hôm nay";
+      frameDetails.innerHTML = `Trạng thái: <strong>${status.toUpperCase()}</strong> • Thiết bị: <code>${latest.device || "100.71.117.39:5555"}</code> • Ghi nhận: <em>${timeStr}</em><br><small style="color:#9CA3AF;">${latest.message || ""}</small>`;
+    }
+  } catch (e) {
+    console.error("Lỗi lấy trạng thái Android:", e);
+  }
+}
+
+function openFrameModal() {
+  if (androidFrameModal) {
+    const t = Date.now();
+    if (imgFrameBefore) imgFrameBefore.src = `/static/android_checkin_before.png?t=${t}`;
+    if (imgFrameAfter) imgFrameAfter.src = `/static/android_checkin_after.png?t=${t}`;
+    androidFrameModal.classList.remove("hidden");
+  }
+}
+
+function closeFrameModal() {
+  if (androidFrameModal) {
+    androidFrameModal.classList.add("hidden");
+  }
 }
 
 function escapeHtml(str) {
