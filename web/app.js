@@ -129,7 +129,7 @@ function initWebSocket() {
   const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
 
   if (appState.ws) {
-    try { appState.ws.close(); } catch (e) {}
+    try { appState.ws.close(); } catch (e) { }
   }
 
   appState.ws = new WebSocket(wsUrl);
@@ -417,7 +417,7 @@ async function loadStatus() {
     const res = await fetch("/api/status");
     if (!res.ok) return;
     const data = await res.json();
-    
+
     const wasRunning = appState.isRunning;
     const prevTaskId = appState.currentTask?.profile_id;
 
@@ -738,7 +738,7 @@ async function openSettingsModal() {
     const res = await fetch("/api/config");
     if (!res.ok) throw new Error("Failed to load config");
     const data = await res.json();
-    
+
     const sc = data.search_settings || {};
     const bc = data.browser_settings || {};
     const ac = data.android_settings || {};
@@ -753,7 +753,7 @@ async function openSettingsModal() {
     document.getElementById("cfgSmoothScroll").checked = sc.enable_smooth_scrolling !== false;
     document.getElementById("cfgMouseMovement").checked = sc.enable_mouse_movement !== false;
     document.getElementById("cfgClickChance").value = sc.random_click_chance !== undefined ? sc.random_click_chance : 0.25;
-    
+
     document.getElementById("cfgHeadless").checked = !!bc.headless;
     if (bc.mobile_device_name) {
       document.getElementById("cfgMobileDevice").value = bc.mobile_device_name;
@@ -854,56 +854,94 @@ keywordsEditor.addEventListener("input", () => {
 });
 
 btnSaveKeywords.addEventListener("click", async () => {
+  const originalText = btnSaveKeywords.innerText;
   try {
+    btnSaveKeywords.disabled = true;
+    btnSaveKeywords.innerText = "⏳ Đang lưu...";
     const res = await fetch("/api/keywords", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: keywordsEditor.value })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error("Failed to save keywords");
+    if (!res.ok || data.status === "error") throw new Error(data.message || "Failed to save keywords");
+    if (data.count !== undefined) {
+      keywordsCountDisplay.innerText = data.count;
+    }
     closeKeywordsModal();
     alert(`💾 Đã lưu thành công kho ${data.count} từ khóa tìm kiếm!`);
   } catch (err) {
     alert(`Lỗi lưu từ khóa: ${err.message}`);
+  } finally {
+    btnSaveKeywords.disabled = false;
+    btnSaveKeywords.innerText = originalText;
   }
 });
 
-btnSeedKeywords.addEventListener("click", () => {
-  const sampleKeywords = [
-    "thời tiết hôm nay tại hà nội", "tin tức thời sự vtv hôm nay",
-    "cách làm sườn xào chua ngọt ngon mềm", "địa điểm du lịch đà lạt đẹp nhất",
-    "kết quả bóng đá ngoại hạng anh mới nhất", "top 10 phim chiếu rạp đáng xem",
-    "hướng dẫn tự học lập trình python", "cách tối ưu hóa windows 11",
-    "mẹo tiết kiệm pin laptop hiệu quả", "công thức nấu phở bò truyền thống",
-    "những cuốn sách hay nên đọc một lần", "cách pha cà phê cold brew ngon",
-    "kinh nghiệm du lịch phú quốc tự túc", "tác dụng của trà xanh đối với sức khỏe",
-    "bài tập yoga buổi sáng tăng năng lượng", "cách cải thiện trí nhớ và tập trung",
-    "top công nghệ trí tuệ nhân tạo hiện nay", "thói quen tốt trước khi đi ngủ",
-    "cách làm bánh mì bơ tỏi tại nhà", "giá vàng hôm nay 9999",
-    "lịch thi đấu cúp c1 châu âu", "cách trồng cây phong thủy trong nhà",
-    "how to learn coding fast for beginners", "best healthy breakfast recipes",
-    "benefits of drinking water daily", "how do airplanes stay in the air",
-    "tips for better sleep quality at night", "difference between ai and machine learning",
-    "history of the ancient roman empire", "best books to read in your lifetime",
-    "how to speak with confidence in public", "simple morning routine for high productivity"
-  ];
+btnSeedKeywords.addEventListener("click", async () => {
+  if (btnSeedKeywords.disabled) return;
 
-  const currentLines = keywordsEditor.value.split("\n").map(l => l.trim());
-  const existingSet = new Set(currentLines.map(l => l.toLowerCase()));
-  let added = 0;
+  const btnSeedKeywordsText = document.getElementById("btnSeedKeywordsText");
+  const aiKeywordsStatus = document.getElementById("aiKeywordsStatus");
+  const originalText = btnSeedKeywordsText ? btnSeedKeywordsText.innerText : "✨ AI Thêm 50 Từ Khóa Mới";
 
-  for (const kw of sampleKeywords) {
-    if (!existingSet.has(kw.toLowerCase())) {
-      currentLines.push(kw);
-      existingSet.add(kw.toLowerCase());
-      added++;
+  try {
+    btnSeedKeywords.disabled = true;
+    if (btnSeedKeywordsText) btnSeedKeywordsText.innerText = "⏳ Đang gọi AI sinh 50 từ...";
+    if (aiKeywordsStatus) {
+      aiKeywordsStatus.style.color = "#38BDF8";
+      aiKeywordsStatus.innerText = "Đang tạo...";
     }
-  }
 
-  keywordsEditor.value = currentLines.filter(l => l).join("\n");
-  keywordsCountDisplay.innerText = existingSet.size;
-  alert(`✨ Đã bổ sung thêm ${added} từ khóa mẫu tự nhiên vào danh sách! Bấm 'Lưu' để áp dụng.`);
+    const res = await fetch("/api/keywords/generate-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        count: 50,
+        current_content: keywordsEditor.value
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.status === "error") throw new Error(data.message || "Lỗi khi sinh từ khóa từ AI");
+
+    const newKws = data.new_keywords || [];
+
+    if (data.updated_content !== undefined) {
+      keywordsEditor.value = data.updated_content;
+      keywordsCountDisplay.innerText = data.total_count || 0;
+    } else {
+      const currentVal = keywordsEditor.value.trim();
+      if (currentVal) {
+        keywordsEditor.value = currentVal + "\n" + newKws.join("\n");
+      } else {
+        keywordsEditor.value = newKws.join("\n");
+      }
+      const allValid = keywordsEditor.value.split("\n").filter(l => l.trim() && !l.trim().startsWith("#"));
+      keywordsCountDisplay.innerText = allValid.length;
+    }
+
+    if (aiKeywordsStatus) {
+      aiKeywordsStatus.style.color = "#10B981";
+      aiKeywordsStatus.innerText = `+${newKws.length} từ mới!`;
+      setTimeout(() => { if (aiKeywordsStatus) aiKeywordsStatus.innerText = ""; }, 5000);
+    }
+
+    // Cuộn mượt xuống cuối editor để người dùng thấy ngay từ khóa mới
+    keywordsEditor.scrollTop = keywordsEditor.scrollHeight;
+
+    const totalCount = keywordsCountDisplay.innerText;
+    alert(`🎉 Thành công! AI đã sinh và thêm ${newKws.length} từ khóa mới hoàn toàn (độ dài 3-6 từ, cả tiếng Anh & tiếng Việt)!\nTổng kho hiện tại: ${totalCount} từ khóa.`);
+  } catch (err) {
+    alert(`❌ Lỗi gọi AI tạo từ khóa: ${err.message}`);
+    if (aiKeywordsStatus) {
+      aiKeywordsStatus.style.color = "#EF4444";
+      aiKeywordsStatus.innerText = "Lỗi!";
+    }
+  } finally {
+    btnSeedKeywords.disabled = false;
+    if (btnSeedKeywordsText) btnSeedKeywordsText.innerText = originalText;
+  }
 });
 
 
@@ -924,7 +962,7 @@ btnClearLogs.addEventListener("click", async () => {
       previewText.innerText = "Terminal log buffer cleared.";
       previewText.className = "preview-text";
     }
-  } catch (err) {}
+  } catch (err) { }
 });
 
 btnDownloadLogs.addEventListener("click", () => {
@@ -1238,7 +1276,7 @@ async function recoverLiveSearchesFromLogs() {
       });
       updateInspectorPointsUI();
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function populatePointsProfileSelect() {

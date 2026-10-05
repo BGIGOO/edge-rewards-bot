@@ -45,6 +45,7 @@ from edge_rewards_bot import (
     open_browser_for_login,
     check_profile_points
 )
+from ai_keywords import generate_new_keywords, append_keywords_to_file
 import db
 db.init_db()
 
@@ -603,22 +604,25 @@ async def get_config_endpoint(request):
 
 async def save_config_endpoint(request):
     """Lưu cấu hình tìm kiếm, browser và android"""
-    data = await request.json()
-    cfg = load_config()
-    if "search_settings" in data:
-        cfg["search_settings"].update(data["search_settings"])
-    if "browser_settings" in data:
-        cfg["browser_settings"].update(data["browser_settings"])
-    if "android_settings" in data:
-        if "android_settings" not in cfg:
-            cfg["android_settings"] = {}
-        cfg["android_settings"].update(data["android_settings"])
+    try:
+        data = await request.json()
+        cfg = load_config()
+        if "search_settings" in data:
+            cfg["search_settings"].update(data["search_settings"])
+        if "browser_settings" in data:
+            cfg["browser_settings"].update(data["browser_settings"])
+        if "android_settings" in data:
+            if "android_settings" not in cfg:
+                cfg["android_settings"] = {}
+            cfg["android_settings"].update(data["android_settings"])
 
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
 
-    task_mgr.add_log("💾 [CẤU HÌNH] Đã cập nhật cài đặt hệ thống.", "info")
-    return JSONResponse({"status": "success"})
+        task_mgr.add_log("💾 [CẤU HÌNH] Đã cập nhật cài đặt hệ thống.", "info")
+        return JSONResponse({"status": "success"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 
 async def run_android_endpoint(request):
@@ -656,13 +660,83 @@ async def get_keywords_endpoint(request):
 
 async def save_keywords_endpoint(request):
     """Lưu danh sách từ khóa"""
-    data = await request.json()
-    content = data.get("content", "")
-    with open(KEYWORDS_PATH, "w", encoding="utf-8") as f:
-        f.write(content)
-    lines_count = len([l for l in content.splitlines() if l.strip() and not l.strip().startswith("#")])
-    task_mgr.add_log(f"💾 [TỪ KHÓA] Đã cập nhật kho từ khóa ({lines_count} từ khóa hợp lệ).", "info")
-    return JSONResponse({"status": "success", "count": lines_count})
+    try:
+        data = await request.json()
+        content = data.get("content", "")
+        os.makedirs(os.path.dirname(os.path.abspath(KEYWORDS_PATH)), exist_ok=True)
+        with open(KEYWORDS_PATH, "w", encoding="utf-8") as f:
+            f.write(content)
+        lines_count = len([l for l in content.splitlines() if l.strip() and not l.strip().startswith("#")])
+        task_mgr.add_log(f"💾 [TỪ KHÓA] Đã cập nhật kho từ khóa ({lines_count} từ khóa hợp lệ).", "info")
+        return JSONResponse({"status": "success", "count": lines_count})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+async def generate_ai_keywords_endpoint(request):
+    """Gọi AI sinh 50 từ khóa mới hoàn toàn (3-6 từ, Anh & Việt)"""
+    try:
+        count = 50
+        body = {}
+        try:
+            body = await request.json()
+            if "count" in body:
+                count = int(body["count"])
+        except Exception:
+            pass
+
+        count = max(10, min(count, 100))
+
+        # Đọc kho từ khóa hiện có để lọc trùng lặp
+        current_content = body.get("current_content")
+        existing_set = set()
+        
+        if current_content is not None:
+            # Ưu tiên lấy từ khóa từ editor hiện hành
+            for line in current_content.splitlines():
+                c = line.strip().lower()
+                if c and not c.startswith("#"):
+                    existing_set.add(c)
+        elif os.path.exists(KEYWORDS_PATH):
+            with open(KEYWORDS_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    c = line.strip().lower()
+                    if c and not c.startswith("#"):
+                        existing_set.add(c)
+
+        # Sinh 50 từ khóa mới chuẩn 3-6 từ
+        new_kws = generate_new_keywords(count=count, existing_set=existing_set)
+
+        if current_content is not None:
+            # Ghi đè file bằng nội dung editor hiện tại + từ khóa mới
+            clean_current = current_content.strip()
+            if clean_current:
+                updated_content = clean_current + "\n" + "\n".join(new_kws) + "\n"
+            else:
+                updated_content = "\n".join(new_kws) + "\n"
+            os.makedirs(os.path.dirname(os.path.abspath(KEYWORDS_PATH)), exist_ok=True)
+            with open(KEYWORDS_PATH, "w", encoding="utf-8") as f:
+                f.write(updated_content)
+        else:
+            # Tự động append vào keywords.txt
+            append_keywords_to_file(new_kws)
+            updated_content = ""
+            if os.path.exists(KEYWORDS_PATH):
+                with open(KEYWORDS_PATH, "r", encoding="utf-8") as f:
+                    updated_content = f.read()
+
+        total_count = len([l for l in updated_content.splitlines() if l.strip() and not l.strip().startswith("#")])
+        task_mgr.add_log(f"✨ [AI KEYWORDS] Đã sinh và nạp thành công {len(new_kws)} từ khóa mới (Tổng: {total_count} từ khóa).", "success")
+
+        return JSONResponse({
+            "status": "success",
+            "count": len(new_kws),
+            "new_keywords": new_kws,
+            "updated_content": updated_content,
+            "total_count": total_count
+        })
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 
 async def get_logs_endpoint(request):
@@ -747,8 +821,11 @@ routes = [
     Route("/api/profiles/{id}/stop", stop_profile_task, methods=["POST"]),
     Route("/api/run", run_task, methods=["POST"]),
     Route("/api/stop", stop_task, methods=["POST"]),
-    Route("/api/config", get_config_endpoint, methods=["GET", "POST"]),
-    Route("/api/keywords", get_keywords_endpoint, methods=["GET", "POST"]),
+    Route("/api/config", get_config_endpoint, methods=["GET"]),
+    Route("/api/config", save_config_endpoint, methods=["POST"]),
+    Route("/api/keywords", get_keywords_endpoint, methods=["GET"]),
+    Route("/api/keywords", save_keywords_endpoint, methods=["POST"]),
+    Route("/api/keywords/generate-ai", generate_ai_keywords_endpoint, methods=["POST"]),
     Route("/api/logs", get_logs_endpoint, methods=["GET"]),
     Route("/api/logs/clear", clear_logs_endpoint, methods=["POST"]),
     Route("/api/history", get_history_endpoint, methods=["GET"]),
@@ -770,11 +847,16 @@ if os.path.exists(WEB_DIR):
 
 
 def free_port(port=5000):
-    """Tự động giải phóng port nếu có tiến trình cũ chiếm giữ"""
+    """Tự động giải phóng port nếu có tiến trình cũ chiếm giữ (bỏ qua PID hiện tại)"""
     try:
-        ps_cmd = f"Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+        curr_pid = os.getpid()
+        ps_cmd = (
+            f"Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | "
+            f"Where-Object {{ $_.OwningProcess -ne {curr_pid} }} | "
+            f"ForEach-Object {{ Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }}"
+        )
         subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], capture_output=True, timeout=5)
-        time.sleep(0.5)
+        time.sleep(0.3)
     except Exception:
         pass
 
@@ -788,7 +870,7 @@ def main():
     print(f"👉 Đang chạy tại địa chỉ: http://127.0.0.1:{port}")
     print("=" * 65)
     
-    # Tự động mở trình duyệt sau 1.5 giây
+    # Tự động mở trình duyệt sau 1.2 giây
     def open_browser():
         time.sleep(1.2)
         try:
@@ -802,12 +884,12 @@ def main():
     
     try:
         uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    except (KeyboardInterrupt, SystemExit):
+        print("\n[*] Đã nhận lệnh dừng Web Server.")
+        sys.exit(0)
     except Exception as e:
-        print(f"[!] Lỗi khởi động Uvicorn: {e}")
-        # Thử lại 1 lần sau khi ép giải phóng port
-        free_port(port)
-        time.sleep(1.0)
-        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+        print(f"[!] Lỗi Uvicorn: {e}")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -645,14 +645,17 @@
         </div>
         <button class="modal-close" onclick="closeKeywordsModal()">&times;</button>
       </div>
-      <div class="keywords-toolbar">
+      <div class="keywords-toolbar" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <span class="keywords-badge">Tổng từ khóa: <strong id="keywordsCountDisplay">0</strong></span>
-        <button id="btnSeedKeywords" class="btn btn-secondary btn-sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-          </svg>
-          <span>Nạp 50+ từ khóa mẫu</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="aiKeywordsStatus" style="font-size: 12px; color: #10B981; font-weight: 600;"></span>
+          <button id="btnSeedKeywords" class="btn btn-primary btn-sm" title="Gọi AI sinh mới 50 từ khóa tự nhiên chuẩn 3-6 từ đan xen Anh - Việt và thêm vào kho">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span id="btnSeedKeywordsText">✨ AI Thêm 50 Từ Khóa Mới</span>
+          </button>
+        </div>
       </div>
       <div class="keywords-area">
         <textarea id="keywordsEditor" class="keywords-editor" placeholder="Mỗi từ khóa trên một dòng..."></textarea>
