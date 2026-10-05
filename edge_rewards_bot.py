@@ -827,6 +827,199 @@ def run_profile_session(profile, selected_mode, config, keywords_pool=None):
     }
 
 
+def parse_rewards_breakdown_text(text):
+    """
+    Phân tích nội dung modal 'Points breakdown' từ rewards.bing.com/earn
+    Hỗ trợ cả giao diện tiếng Anh và tiếng Việt.
+    """
+    import re
+    result = {
+        "today_points": 0,
+        "desktop_points": "0/90",
+        "mobile_points": "0/60",
+        "offers_points": 0,
+        "total_points": 0
+    }
+    
+    if not text:
+        return result
+        
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for i, line in enumerate(lines):
+        line_lower = line.lower()
+
+        # 1. Today's points (Điểm hôm nay)
+        if "today's points" in line_lower or "điểm hôm nay" in line_lower:
+            m = re.search(r"(\d[\d,]*)", line[13:])
+            if m:
+                result["today_points"] = int(m.group(1).replace(",", ""))
+            elif i + 1 < len(lines):
+                next_m = re.match(r"^(\d[\d,]*)$", lines[i+1])
+                if next_m:
+                    result["today_points"] = int(next_m.group(1).replace(",", ""))
+
+        # 2. Lifetime / Total points (Tổng điểm tích lũy)
+        if line_lower in ["lifetime", "tổng", "tích lũy", "tổng điểm"]:
+            if i + 1 < len(lines):
+                m = re.search(r"(\d[\d,]*)", lines[i+1])
+                if m:
+                    result["total_points"] = int(m.group(1).replace(",", ""))
+        elif "lifetime" in line_lower or "tổng tích lũy" in line_lower:
+            m = re.search(r"(\d[\d,]*)", line)
+            if m and not line_lower.startswith("lifetime"):
+                result["total_points"] = int(m.group(1).replace(",", ""))
+
+        # 3. Desktop Bing search (hoặc Bing search thông thường nếu tài khoản Level 1)
+        if any(k in line_lower for k in ["desktop bing search", "pc bing search", "tìm kiếm trên pc", "tìm kiếm desktop"]):
+            if i + 1 < len(lines) and "/" in lines[i+1]:
+                result["desktop_points"] = lines[i+1].strip()
+            else:
+                m = re.search(r"(\d+\s*/\s*\d+)", line)
+                if m:
+                    result["desktop_points"] = m.group(1).replace(" ", "")
+        elif line_lower in ["bing search", "tìm kiếm bing"]:
+            if i + 1 < len(lines) and "/" in lines[i+1]:
+                result["desktop_points"] = lines[i+1].strip()
+            else:
+                m = re.search(r"(\d+\s*/\s*\d+)", line)
+                if m:
+                    result["desktop_points"] = m.group(1).replace(" ", "")
+
+        # 4. Mobile Bing search
+        if any(k in line_lower for k in ["mobile bing search", "tìm kiếm trên di động", "tìm kiếm mobile"]):
+            if i + 1 < len(lines) and "/" in lines[i+1]:
+                result["mobile_points"] = lines[i+1].strip()
+            else:
+                m = re.search(r"(\d+\s*/\s*\d+)", line)
+                if m:
+                    result["mobile_points"] = m.group(1).replace(" ", "")
+
+        # 5. Offers (Ưu đãi / Nhiệm vụ khác)
+        if line_lower in ["offers", "ưu đãi", "nhiệm vụ khác"]:
+            if i + 1 < len(lines) and re.match(r"^\d+$", lines[i+1]):
+                result["offers_points"] = int(lines[i+1])
+            else:
+                m = re.search(r"(\d+)", line)
+                if m:
+                    result["offers_points"] = int(m.group(1))
+
+    return result
+
+
+def check_profile_points(profile_dict, config=None):
+    """
+    Kiểm tra điểm thực tế trên Bing Rewards cho DUY NHẤT 1 tài khoản chỉ định.
+    Mở trình duyệt Edge ở chế độ Headless an toàn, đóng ngay sau khi đọc xong.
+    Không bao giờ mở đồng loạt nhiều tài khoản cùng lúc (chống ban).
+    """
+    if not profile_dict:
+        return {"success": False, "message": "Không tìm thấy thông tin profile"}
+
+    import db
+    db.init_db()
+
+    p_id = profile_dict.get("id")
+    p_name = profile_dict.get("name", f"Profile {p_id}")
+    profile_dir = get_profile_abs_path(profile_dict)
+
+    print(f"\n🔍 [CHECK ĐIỂM] Bắt đầu kiểm tra điểm cho: {p_name} (Thư mục: {profile_dir})")
+    
+    # Giải phóng tiến trình treo nếu có
+    kill_zombie_edge_processes(profile_dir)
+
+    cfg = load_config() if config is None else config
+    cfg_copy = json.loads(json.dumps(cfg))
+    cfg_copy.setdefault("browser_settings", {})["headless"] = True
+
+    driver = None
+    try:
+        driver = create_edge_driver(is_mobile=False, config=cfg_copy, profile_target=profile_dict)
+        driver.set_page_load_timeout(25)
+        driver.get("https://rewards.bing.com/earn")
+        time.sleep(3.5)
+
+        # Kiểm tra nếu bị chuyển hướng sang trang đăng nhập
+        cur_url = driver.current_url.lower()
+        if "login.live.com" in cur_url or "signup" in cur_url:
+            db.update_profile_db(p_id, status="unlogged")
+            return {
+                "success": False,
+                "status": "unlogged",
+                "message": f"Tài khoản {p_name} chưa đăng nhập hoặc phiên đã hết hạn. Vui lòng bấm 'Đăng nhập' trước."
+            }
+
+        # Tìm và nhấn nút Points breakdown
+        dialog_text = ""
+        try:
+            breakdown_btns = driver.find_elements(
+                By.XPATH,
+                '//*[contains(translate(text(), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "breakdown") or contains(text(), "Chi tiết điểm") or contains(@aria-label, "breakdown")]'
+            )
+            if breakdown_btns:
+                driver.execute_script("arguments[0].click();", breakdown_btns[0])
+                time.sleep(1.8)
+                dialogs = driver.find_elements(By.CSS_SELECTOR, '[role="dialog"], [class*="modal"]')
+                if dialogs:
+                    dialog_text = dialogs[0].text
+        except Exception as e_btn:
+            print(f"   [!] Thử mở modal breakdown: {e_btn}")
+
+        if not dialog_text:
+            try:
+                dialog_text = driver.find_element(By.TAG_NAME, "body").text
+            except Exception:
+                pass
+
+        parsed = parse_rewards_breakdown_text(dialog_text)
+
+        # Nếu chưa tìm thấy tổng điểm từ modal, kiểm tra các thẻ header điểm trên trang
+        if parsed["total_points"] == 0:
+            try:
+                import re
+                pts_elems = driver.find_elements(By.CSS_SELECTOR, "#rh_meter, .rh_meter, [class*='points-count'], #id_rc")
+                for el in pts_elems:
+                    num_match = re.search(r"(\d[\d,]*)", el.text)
+                    if num_match:
+                        parsed["total_points"] = int(num_match.group(1).replace(",", ""))
+                        break
+            except Exception:
+                pass
+
+        # Cập nhật vào SQLite Database
+        updated = db.update_profile_db(
+            p_id,
+            total_points=parsed["total_points"],
+            today_points=parsed["today_points"],
+            desktop_points=parsed["desktop_points"],
+            mobile_points=parsed["mobile_points"],
+            offers_points=parsed["offers_points"],
+            status="ready"
+        )
+
+        print(f"   [✓] Điểm hôm nay: {parsed['today_points']} pts | PC: {parsed['desktop_points']} | Mobile: {parsed['mobile_points']} | Tổng: {parsed['total_points']} pts")
+        return {
+            "success": True,
+            "message": "Kiểm tra điểm thành công",
+            "data": parsed,
+            "profile": updated
+        }
+
+    except Exception as e:
+        print(f"   [!] Lỗi khi kiểm tra điểm cho {p_name}: {e}")
+        return {
+            "success": False,
+            "message": f"Lỗi kiểm tra điểm: {str(e)}"
+        }
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+        time.sleep(1)
+        kill_zombie_edge_processes(profile_dir)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Microsoft Rewards Auto Search Bot")
     parser.add_argument("--profile", default=None,

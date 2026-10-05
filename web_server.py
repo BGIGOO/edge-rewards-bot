@@ -42,7 +42,8 @@ from edge_rewards_bot import (
     load_config,
     get_profile_abs_path,
     kill_zombie_edge_processes,
-    open_browser_for_login
+    open_browser_for_login,
+    check_profile_points
 )
 import db
 db.init_db()
@@ -283,8 +284,11 @@ async def get_profiles(request):
             "path": p.get("path", ""),
             "profile_directory": p.get("profile_directory", "Default"),
             "status": p.get("status", "ready"),
-            "total_points": p.get("total_points", 0),
-            "today_points": p.get("today_points", 0),
+            "total_points": p.get("total_points", 0) or 0,
+            "today_points": p.get("today_points", 0) or 0,
+            "desktop_points": p.get("desktop_points") or "0/90",
+            "mobile_points": p.get("mobile_points") or "0/60",
+            "offers_points": p.get("offers_points", 0) or 0,
             "last_run": p.get("last_run", ""),
             "exists": dir_exists
         })
@@ -364,6 +368,58 @@ async def login_profile(request):
     else:
         task_mgr.add_log("❌ [LỖI] Không thể khởi động Microsoft Edge.", "error")
         return JSONResponse({"status": "error"}, status_code=500)
+
+
+async def check_profile_endpoint(request):
+    """Kiểm tra điểm thực tế trên Bing Rewards cho DUY NHẤT 1 tài khoản chỉ định (An toàn, chống ban)"""
+    p_id = request.path_params.get("id")
+    target_profile = db.get_profile_by_id(p_id)
+    if not target_profile:
+        cfg = load_config()
+        matched = [p for p in cfg.get("profiles", []) if str(p.get("id")) == str(p_id)]
+        if matched:
+            target_profile = matched[0]
+
+    if not target_profile:
+        return JSONResponse({"status": "error", "message": "Không tìm thấy hồ sơ tài khoản"}, status_code=404)
+
+    # Nếu tài khoản này đang chạy tìm kiếm
+    if task_mgr.is_running and task_mgr.current_task_info and str(task_mgr.current_task_info.get("profile_id")) == str(p_id):
+        return JSONResponse({
+            "status": "error", 
+            "message": f"Tài khoản {target_profile.get('name')} đang trong phiên chạy bot. Vui lòng đợi bot chạy xong trước khi check điểm!"
+        }, status_code=400)
+
+    p_name = target_profile.get("name", f"Profile {p_id}")
+    task_mgr.add_log(f"🔍 [CHECK ĐIỂM] Đang kết nối kiểm tra điểm thực tế cho {p_name}...", "start")
+
+    loop = asyncio.get_event_loop()
+    # Chạy trong executor để không làm nghẽn event loop của web server
+    res = await loop.run_in_executor(None, check_profile_points, target_profile)
+
+    if res.get("success"):
+        d = res.get("data", {})
+        today_p = d.get('today_points', 0)
+        pc_p = d.get('desktop_points', '0/90')
+        mob_p = d.get('mobile_points', '0/60')
+        tot_p = d.get('total_points', 0)
+        task_mgr.add_log(
+            f"⭐ [ĐIỂM REWARDS] {p_name}: Hôm nay +{today_p} pts | PC: {pc_p} | Mobile: {mob_p} | Tổng tích lũy: {tot_p} pts",
+            "success"
+        )
+        return JSONResponse({
+            "status": "success",
+            "profile": res.get("profile"),
+            "data": d
+        })
+    else:
+        err_msg = res.get("message", "Không thể kiểm tra điểm")
+        task_mgr.add_log(f"❌ [CHECK ĐIỂM THẤT BẠI] {p_name}: {err_msg}", "error")
+        return JSONResponse({
+            "status": "error",
+            "message": err_msg
+        }, status_code=400)
+
 
 
 async def get_history_endpoint(request):
@@ -566,6 +622,7 @@ routes = [
     Route("/api/profiles/{id}", delete_profile, methods=["DELETE"]),
     Route("/api/profiles/{id}/unlock", unlock_profile, methods=["POST"]),
     Route("/api/profiles/{id}/login", login_profile, methods=["POST"]),
+    Route("/api/profiles/{id}/check", check_profile_endpoint, methods=["POST"]),
     Route("/api/profiles/{id}/stop", stop_profile_task, methods=["POST"]),
     Route("/api/run", run_task, methods=["POST"]),
     Route("/api/stop", stop_task, methods=["POST"]),

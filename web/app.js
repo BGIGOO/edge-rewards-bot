@@ -13,7 +13,8 @@ let appState = {
   liveSearches: {
     desktopCount: 0,
     mobileCount: 0
-  }
+  },
+  checkingProfiles: new Set()
 };
 
 // DOM References
@@ -34,6 +35,7 @@ const logCounter = document.getElementById("logCounter");
 // Inspector & Points Breakdown DOM References
 const pointsProfileSelect = document.getElementById("pointsProfileSelect");
 const pbTodayPoints = document.getElementById("pbTodayPoints");
+const pbLifetimePoints = document.getElementById("pbLifetimePoints");
 const pbDesktopEarned = document.getElementById("pbDesktopEarned");
 const pbDesktopBar = document.getElementById("pbDesktopBar");
 const pbMobileEarned = document.getElementById("pbMobileEarned");
@@ -260,6 +262,7 @@ function renderProfiles(profiles) {
 
   profiles.forEach((p, idx) => {
     const isThisRunning = appState.isRunning && appState.currentTask && String(appState.currentTask.profile_id) === String(p.id);
+    const isChecking = appState.checkingProfiles && appState.checkingProfiles.has(String(p.id));
     const row = document.createElement("tr");
     row.className = `profile-row ${isThisRunning ? "is-running" : ""}`;
     row.id = `profile-row-${p.id}`;
@@ -273,6 +276,9 @@ function renderProfiles(profiles) {
     if (isThisRunning) {
       statusClass = "status-running";
       statusText = `Đang chạy (${(appState.currentTask?.mode || "").toUpperCase()})`;
+    } else if (isChecking) {
+      statusClass = "status-checking";
+      statusText = "Đang check...";
     } else if (isUnlogged) {
       statusClass = "status-unlogged";
       statusText = "Chưa đăng nhập";
@@ -321,6 +327,26 @@ function renderProfiles(profiles) {
     const nameDisplay = escapeHtml(p.name);
     const pathDisplay = escapeHtml(p.path);
 
+    // Points Column formatting
+    const todayPts = p.today_points ? `${p.today_points} pts` : '--';
+    const totalPts = p.total_points ? Number(p.total_points).toLocaleString() : '--';
+    const pcPts = p.desktop_points || '0/90';
+    const mobPts = p.mobile_points || '0/60';
+
+    const pointsCellHtml = `
+      <div class="pts-badge-cell">
+        <div class="pts-today-tag">
+          <span class="pts-today-val">${todayPts}</span>
+          <span class="pts-label">hôm nay</span>
+        </div>
+        <div class="pts-breakdown-mini">
+          <span class="pts-pill" title="Desktop Bing Search">💻 ${pcPts}</span>
+          <span class="pts-pill" title="Mobile Bing Search">📱 ${mobPts}</span>
+          <span class="pts-pill pts-total-pill" title="Tổng điểm tích lũy (Lifetime)">⭐ ${totalPts}</span>
+        </div>
+      </div>
+    `;
+
     row.innerHTML = `
       <td class="col-id">
         <span class="id-badge">#${p.id}</span>
@@ -334,6 +360,9 @@ function renderProfiles(profiles) {
           <span class="account-path" title="${pathDisplay}">${pathDisplay}</span>
         </div>
       </td>
+      <td class="col-points">
+        ${pointsCellHtml}
+      </td>
       <td class="col-status">
         <span class="badge-status ${statusClass}">
           <span class="status-dot"></span>
@@ -345,7 +374,10 @@ function renderProfiles(profiles) {
       </td>
       <td class="col-actions">
         <div class="actions-group">
-          <button class="btn btn-xs btn-login ${isUnlogged ? 'btn-attention' : ''}" onclick="loginProfile('${p.id}')" title="Mở Edge độc lập để đăng nhập tài khoản hoặc kiểm tra điểm">
+          <button class="btn btn-xs btn-check ${isChecking ? 'checking' : ''}" onclick="checkProfilePoints('${p.id}')" ${isChecking || isThisRunning ? 'disabled' : ''} title="Kiểm tra số điểm thực tế trên Bing Rewards cho tài khoản này (chạy an toàn 1 tài khoản, không bị ban)">
+            ${isChecking ? '<span class="spinner-mini"></span><span>Đang check...</span>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span>Check</span>'}
+          </button>
+          <button class="btn btn-xs btn-login ${isUnlogged ? 'btn-attention' : ''}" onclick="loginProfile('${p.id}')" title="Mở Edge độc lập để đăng nhập tài khoản">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
             <span>Đăng nhập</span>
           </button>
@@ -535,6 +567,50 @@ async function stopBot() {
     }
   } catch (err) {
     alert(`Lỗi khi gửi lệnh dừng: ${err.message}`);
+  }
+}
+
+async function checkProfilePoints(profileId) {
+  const profile = appState.profiles.find(p => String(p.id) === String(profileId));
+  const pName = profile ? profile.name : `Tài khoản #${profileId}`;
+
+  if (appState.checkingProfiles.has(String(profileId))) {
+    return;
+  }
+
+  if (appState.isRunning && appState.currentTask && String(appState.currentTask.profile_id) === String(profileId)) {
+    alert(`Tài khoản ${pName} đang chạy bot tìm kiếm!\nVui lòng đợi phiên chạy hoàn thành trước khi check điểm.`);
+    return;
+  }
+
+  appState.checkingProfiles.add(String(profileId));
+  renderProfiles(appState.profiles);
+
+  try {
+    const res = await fetch(`/api/profiles/${profileId}/check`, {
+      method: "POST"
+    });
+    const result = await res.json();
+
+    if (!res.ok || result.status === "error") {
+      alert(`[Lỗi check điểm] ${result.message || "Không thể kiểm tra điểm"}`);
+    } else {
+      // Cập nhật profile trong danh sách hiện tại
+      const updated = result.profile;
+      const idx = appState.profiles.findIndex(p => String(p.id) === String(profileId));
+      if (idx !== -1 && updated) {
+        appState.profiles[idx] = { ...appState.profiles[idx], ...updated };
+      }
+      // Đồng bộ sang thanh Inspector nếu đang xem profile này
+      if (pointsProfileSelect && (pointsProfileSelect.value === String(profileId) || pointsProfileSelect.value === "live")) {
+        updateInspectorPointsUI();
+      }
+    }
+  } catch (err) {
+    alert(`Lỗi kết nối khi check điểm: ${err.message}`);
+  } finally {
+    appState.checkingProfiles.delete(String(profileId));
+    renderProfiles(appState.profiles);
   }
 }
 
@@ -1062,36 +1138,62 @@ function populatePointsProfileSelect() {
 
 function updateInspectorPointsUI() {
   const selectVal = pointsProfileSelect ? pointsProfileSelect.value : "live";
-  let desktopEarned = 0;
-  let mobileEarned = 0;
-  let offersEarned = 655;
+  let desktopStr = "0/90";
+  let mobileStr = "0/60";
+  let offersEarned = 0;
   let todayTotal = 0;
+  let lifetimeTotal = 0;
 
   if (selectVal === "live") {
-    desktopEarned = Math.min(90, appState.liveSearches.desktopCount * 3);
-    mobileEarned = Math.min(60, appState.liveSearches.mobileCount * 3);
-    todayTotal = desktopEarned + mobileEarned + (desktopEarned > 0 || mobileEarned > 0 ? offersEarned : 0);
+    const currentPid = appState.currentTask?.profile_id;
+    const runningProfile = currentPid ? appState.profiles.find(p => String(p.id) === String(currentPid)) : null;
+
+    if (runningProfile) {
+      todayTotal = runningProfile.today_points || 0;
+      lifetimeTotal = runningProfile.total_points || 0;
+      desktopStr = runningProfile.desktop_points || "0/90";
+      mobileStr = runningProfile.mobile_points || "0/60";
+      offersEarned = runningProfile.offers_points || 0;
+    } else {
+      const pcEarned = Math.min(90, appState.liveSearches.desktopCount * 3);
+      const mobEarned = Math.min(60, appState.liveSearches.mobileCount * 3);
+      desktopStr = `${pcEarned}/90`;
+      mobileStr = `${mobEarned}/60`;
+      todayTotal = pcEarned + mobEarned;
+    }
   } else {
     const profile = appState.profiles.find(p => String(p.id) === String(selectVal));
     if (profile) {
       todayTotal = profile.today_points || 0;
-      desktopEarned = profile.desktop_points || (todayTotal >= 90 ? 90 : Math.min(90, todayTotal));
-      mobileEarned = profile.mobile_points || (todayTotal > 90 ? Math.min(60, todayTotal - 90) : 0);
-      offersEarned = profile.offers_points || Math.max(0, todayTotal - desktopEarned - mobileEarned);
+      lifetimeTotal = profile.total_points || 0;
+      desktopStr = profile.desktop_points || "0/90";
+      mobileStr = profile.mobile_points || "0/60";
+      offersEarned = profile.offers_points || 0;
     }
   }
 
+  // Parse numerator/denominator an toàn
+  const parseFrac = (str, defMax) => {
+    if (!str || typeof str !== "string") return { cur: 0, max: defMax };
+    const parts = str.split("/").map(s => parseInt(s.trim(), 10));
+    return { cur: isNaN(parts[0]) ? 0 : parts[0], max: isNaN(parts[1]) ? defMax : parts[1] };
+  };
+
+  const pcFrac = parseFrac(desktopStr, 90);
+  const mobFrac = parseFrac(mobileStr, 60);
+
   if (pbTodayPoints) pbTodayPoints.innerText = todayTotal;
-  if (pbDesktopEarned) pbDesktopEarned.innerText = desktopEarned;
-  if (pbMobileEarned) pbMobileEarned.innerText = mobileEarned;
+  if (pbLifetimePoints) pbLifetimePoints.innerText = lifetimeTotal ? lifetimeTotal.toLocaleString() : "0";
+  if (pbDesktopEarned) pbDesktopEarned.innerText = pcFrac.cur;
+  if (pbMobileEarned) pbMobileEarned.innerText = mobFrac.cur;
   if (pbOffersEarned) pbOffersEarned.innerText = offersEarned;
 
   if (pbDesktopBar) {
-    const pcPct = Math.min(100, Math.round((desktopEarned / 90) * 100));
+    const pcPct = pcFrac.max > 0 ? Math.min(100, Math.round((pcFrac.cur / pcFrac.max) * 100)) : 0;
     pbDesktopBar.style.width = `${pcPct}%`;
   }
   if (pbMobileBar) {
-    const mobPct = Math.min(100, Math.round((mobileEarned / 60) * 100));
+    const mobPct = mobFrac.max > 0 ? Math.min(100, Math.round((mobFrac.cur / mobFrac.max) * 100)) : 0;
     pbMobileBar.style.width = `${mobPct}%`;
   }
 }

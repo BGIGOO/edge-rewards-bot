@@ -141,26 +141,18 @@
           <div class="points-card-body">
             <!-- Today's points highlight box -->
             <div class="todays-points-banner">
-              <span class="banner-subtitle">Today's points</span>
-              <div class="banner-content">
-                <!-- 3D Gold coin stack icon -->
-                <div class="coin-stack-icon">
-                  <svg width="42" height="42" viewBox="0 0 48 48" fill="none">
-                    <ellipse cx="24" cy="36" rx="16" ry="6" fill="#D97706" />
-                    <ellipse cx="24" cy="34" rx="16" ry="6" fill="#F59E0B" />
-                    <ellipse cx="24" cy="30" rx="16" ry="6" fill="#D97706" />
-                    <ellipse cx="24" cy="28" rx="16" ry="6" fill="#F59E0B" />
-                    <ellipse cx="24" cy="24" rx="16" ry="6" fill="#D97706" />
-                    <ellipse cx="24" cy="22" rx="16" ry="6" fill="#FBBF24" />
-                    <ellipse cx="24" cy="18" rx="16" ry="6" fill="#D97706" />
-                    <ellipse cx="24" cy="16" rx="16" ry="6" fill="#FDE047" />
-                    <ellipse cx="24" cy="14" rx="16" ry="6" fill="#FEF08A" />
-                    <path d="M8 14v22c0 3.31 7.16 6 16 6s16-2.69 16-6V14" stroke="#B45309" stroke-width="1.5"
-                      stroke-opacity="0.4" />
-                  </svg>
-                </div>
+              <div class="banner-stat-col">
+                <span class="banner-subtitle">Điểm hôm nay (Today's points)</span>
                 <div class="banner-value">
                   <span id="pbTodayPoints" class="points-num">0</span>
+                  <span class="points-unit">pts</span>
+                </div>
+              </div>
+              <div class="banner-divider-v"></div>
+              <div class="banner-stat-col">
+                <span class="banner-subtitle">Tổng tích lũy (Lifetime)</span>
+                <div class="banner-value">
+                  <span id="pbLifetimePoints" class="lifetime-num">0</span>
                   <span class="points-unit">pts</span>
                 </div>
               </div>
@@ -326,6 +318,7 @@
               <tr>
                 <th class="th-id">#</th>
                 <th class="th-name">Tài Khoản</th>
+                <th class="th-points">Điểm Thưởng (Rewards)</th>
                 <th class="th-status">Trạng Thái</th>
                 <th class="th-quick-run">Chạy Nhanh</th>
                 <th class="th-actions">Thao Tác</th>
@@ -334,7 +327,7 @@
             <tbody id="profilesListBody">
               <!-- Rendered rows injected by app.js -->
               <tr>
-                <td colspan="5" class="loading-state">Đang tải danh sách tài khoản...</td>
+                <td colspan="6" class="loading-state">Đang tải danh sách tài khoản...</td>
               </tr>
             </tbody>
           </table>

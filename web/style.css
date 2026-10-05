@@ -626,6 +626,117 @@ body {
   animation: pulse-dot 1.2s infinite ease-in-out;
 }
 
+.badge-status.status-checking {
+  background: #FEF9C3;
+  color: #854D0E;
+  border: 1px solid #FDE047;
+}
+
+.badge-status.status-checking .status-dot {
+  background-color: #EAB308;
+  animation: pulse-dot 0.8s infinite ease-in-out;
+}
+
+/* Points Column in Accounts Table */
+.th-points {
+  min-width: 175px;
+}
+
+.col-points {
+  min-width: 175px;
+}
+
+.pts-badge-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pts-today-tag {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.pts-today-val {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.pts-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.pts-breakdown-mini {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pts-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.pts-pill.pts-total-pill {
+  background: #FEF3C7;
+  color: #92400E;
+  border-color: #FDE68A;
+  font-weight: 700;
+}
+
+/* Button Check Points (Safe, single-account on-demand verification) */
+.btn-check {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-check:hover:not(:disabled) {
+  background: #DCFCE7;
+  border-color: #86EFAC;
+  color: #14532D;
+}
+
+.btn-check.checking {
+  background: #FEF9C3;
+  color: #854D0E;
+  border-color: #FDE047;
+  cursor: wait;
+}
+
+.spinner-mini {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn-login.btn-attention {
   background: var(--primary);
   color: #FFFFFF;
@@ -1277,55 +1388,63 @@ body {
   gap: 12px;
 }
 
-/* Today's Points Banner */
+/* Today's Points Banner (Clean Minimalist Stat Card) */
 .todays-points-banner {
-  background: #222938;
-  border: 1px solid #2F394D;
+  background: #19202E;
+  border: 1px solid #283347;
   border-radius: var(--radius-md);
   padding: 12px 16px;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.banner-stat-col {
+  display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  flex: 1;
+}
+
+.banner-divider-v {
+  width: 1px;
+  height: 38px;
+  background: #2E3A50;
 }
 
 .banner-subtitle {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   color: #94A3B8;
-  letter-spacing: -0.1px;
-}
-
-.banner-content {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.coin-stack-icon {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.35));
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
 }
 
 .banner-value {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
 }
 
 .points-num {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
   color: #FFFFFF;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.lifetime-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #F59E0B;
+  letter-spacing: -0.5px;
   line-height: 1;
 }
 
 .points-unit {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #F59E0B;
   text-transform: uppercase;

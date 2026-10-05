@@ -37,10 +37,24 @@ def init_db():
             status TEXT DEFAULT 'unlogged',
             total_points INTEGER DEFAULT 0,
             today_points INTEGER DEFAULT 0,
+            desktop_points TEXT DEFAULT '0/90',
+            mobile_points TEXT DEFAULT '0/60',
+            offers_points INTEGER DEFAULT 0,
             last_run TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # Đảm bảo migration cho các cột mới nếu bảng đã tồn tại
+    for col, c_type, def_v in [
+        ("desktop_points", "TEXT", "'0/90'"),
+        ("mobile_points", "TEXT", "'0/60'"),
+        ("offers_points", "INTEGER", "0")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE profiles ADD COLUMN {col} {c_type} DEFAULT {def_v}")
+        except Exception:
+            pass
 
     # Bảng run_history: Lịch sử các phiên chạy
     cursor.execute("""
@@ -169,7 +183,7 @@ def add_profile_db(name=None, custom_path=None, profile_directory=None):
     return get_profile_by_id(next_id)
 
 
-def update_profile_db(profile_id, name=None, email=None, custom_path=None, status=None, total_points=None, today_points=None, last_run=None):
+def update_profile_db(profile_id, name=None, email=None, custom_path=None, status=None, total_points=None, today_points=None, desktop_points=None, mobile_points=None, offers_points=None, last_run=None):
     """Cập nhật thông tin profile trong SQLite"""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -209,6 +223,18 @@ def update_profile_db(profile_id, name=None, email=None, custom_path=None, statu
     if today_points is not None:
         updates.append("today_points = ?")
         params.append(today_points)
+
+    if desktop_points is not None:
+        updates.append("desktop_points = ?")
+        params.append(desktop_points)
+
+    if mobile_points is not None:
+        updates.append("mobile_points = ?")
+        params.append(mobile_points)
+
+    if offers_points is not None:
+        updates.append("offers_points = ?")
+        params.append(offers_points)
 
     if last_run is not None:
         updates.append("last_run = ?")
@@ -261,3 +287,11 @@ def get_recent_history(limit=20):
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# Tự động khởi tạo DB và cấu trúc bảng khi import
+try:
+    init_db()
+except Exception as _e:
+    pass
+
