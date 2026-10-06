@@ -847,6 +847,7 @@ def parse_rewards_breakdown_text(text):
         "desktop_points": "0/90",
         "mobile_points": "0/60",
         "offers_points": 0,
+        "lifetime_points": 0,
         "total_points": 0
     }
     
@@ -867,16 +868,16 @@ def parse_rewards_breakdown_text(text):
                 if next_m:
                     result["today_points"] = int(next_m.group(1).replace(",", ""))
 
-        # 2. Lifetime / Total points (Tổng điểm tích lũy)
+        # 2. Lifetime points (Tổng điểm tích lũy trọn đời)
         if line_lower in ["lifetime", "tổng", "tích lũy", "tổng điểm"]:
             if i + 1 < len(lines):
                 m = re.search(r"(\d[\d,]*)", lines[i+1])
                 if m:
-                    result["total_points"] = int(m.group(1).replace(",", ""))
+                    result["lifetime_points"] = int(m.group(1).replace(",", ""))
         elif "lifetime" in line_lower or "tổng tích lũy" in line_lower:
             m = re.search(r"(\d[\d,]*)", line)
             if m and not line_lower.startswith("lifetime"):
-                result["total_points"] = int(m.group(1).replace(",", ""))
+                result["lifetime_points"] = int(m.group(1).replace(",", ""))
 
         # 3. Desktop Bing search (hoặc Bing search thông thường nếu tài khoản Level 1)
         if any(k in line_lower for k in ["desktop bing search", "pc bing search", "tìm kiếm trên pc", "tìm kiếm desktop"]):
@@ -957,7 +958,22 @@ def check_profile_points(profile_dict, config=None):
                 "message": f"Tài khoản {p_name} chưa đăng nhập hoặc phiên đã hết hạn. Vui lòng bấm 'Đăng nhập' trước."
             }
 
-        # Tìm và nhấn nút Points breakdown
+        # 1. Tìm Điểm khả dụng (Available points) từ Header / Navigation bar trên trang
+        available_points = 0
+        try:
+            header_elems = driver.find_elements(
+                By.CSS_SELECTOR, 
+                "header p, nav p, [role='navigation'] p, div[class*='gap-2'] p, header [class*='text-']"
+            )
+            for el in header_elems:
+                t = el.text.strip().replace(",", "")
+                if t.isdigit() and int(t) > 0:
+                    available_points = int(t)
+                    break
+        except Exception:
+            pass
+
+        # 2. Tìm và nhấn nút Points breakdown để lấy chi tiết hôm nay, PC, Mobile, Offers, Lifetime
         dialog_text = ""
         try:
             breakdown_btns = driver.find_elements(
@@ -981,18 +997,29 @@ def check_profile_points(profile_dict, config=None):
 
         parsed = parse_rewards_breakdown_text(dialog_text)
 
-        # Nếu chưa tìm thấy tổng điểm từ modal, kiểm tra các thẻ header điểm trên trang
-        if parsed["total_points"] == 0:
+        # 3. Nếu chưa lấy được Available points từ header /earn, điều hướng sang /dashboard để đọc thẻ 'Available points'
+        if available_points == 0:
             try:
-                import re
-                pts_elems = driver.find_elements(By.CSS_SELECTOR, "#rh_meter, .rh_meter, [class*='points-count'], #id_rc")
-                for el in pts_elems:
-                    num_match = re.search(r"(\d[\d,]*)", el.text)
-                    if num_match:
-                        parsed["total_points"] = int(num_match.group(1).replace(",", ""))
-                        break
-            except Exception:
-                pass
+                driver.get("https://rewards.bing.com/dashboard")
+                time.sleep(2.5)
+                body_text = driver.find_element(By.TAG_NAME, "body").text
+                lines = [l.strip() for l in body_text.splitlines() if l.strip()]
+                for idx, line in enumerate(lines):
+                    if any(k in line.lower() for k in ["available points", "điểm khả dụng", "điểm hiện có"]):
+                        if idx + 1 < len(lines):
+                            m = re.search(r"(\d[\d,]*)", lines[idx+1])
+                            if m:
+                                available_points = int(m.group(1).replace(",", ""))
+                                break
+            except Exception as e_dash:
+                print(f"   [!] Thử lấy Available points từ dashboard: {e_dash}")
+
+        # Gán Điểm khả dụng vào total_points (Điểm có thể đổi quà)
+        if available_points > 0:
+            parsed["total_points"] = available_points
+            parsed["available_points"] = available_points
+        elif parsed.get("lifetime_points", 0) > 0 and parsed["total_points"] == 0:
+            parsed["total_points"] = parsed["lifetime_points"]
 
         # Cập nhật vào SQLite Database
         updated = db.update_profile_db(
@@ -1005,7 +1032,8 @@ def check_profile_points(profile_dict, config=None):
             status="ready"
         )
 
-        print(f"   [✓] Điểm hôm nay: {parsed['today_points']} pts | PC: {parsed['desktop_points']} | Mobile: {parsed['mobile_points']} | Tổng: {parsed['total_points']} pts")
+        life_str = f" | Trọn đời: {parsed['lifetime_points']:,} pts" if parsed.get("lifetime_points") else ""
+        print(f"   [✓] Điểm hôm nay: {parsed['today_points']} pts | PC: {parsed['desktop_points']} | Mobile: {parsed['mobile_points']} | Khả dụng: {parsed['total_points']:,} pts{life_str}")
         return {
             "success": True,
             "message": "Kiểm tra điểm thành công",

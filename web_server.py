@@ -22,6 +22,19 @@ try:
 except Exception:
     pass
 
+# Ngăn lỗi WinError 10054 trên Windows khi client đóng/F5 kết nối đột ngột
+try:
+    from asyncio.proactor_events import _ProactorBasePipeTransport
+    _orig_call_conn_lost = _ProactorBasePipeTransport._call_connection_lost
+    def _silenced_call_conn_lost(self, exc, *args, **kwargs):
+        try:
+            _orig_call_conn_lost(self, exc, *args, **kwargs)
+        except (ConnectionResetError, OSError):
+            pass
+    _ProactorBasePipeTransport._call_connection_lost = _silenced_call_conn_lost
+except Exception:
+    pass
+
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
@@ -498,8 +511,10 @@ async def check_profile_endpoint(request):
         pc_p = d.get('desktop_points', '0/90')
         mob_p = d.get('mobile_points', '0/60')
         tot_p = d.get('total_points', 0)
+        life_p = d.get('lifetime_points', 0)
+        life_str = f" (Trọn đời: {life_p:,} pts)" if life_p else ""
         task_mgr.add_log(
-            f"⭐ [ĐIỂM REWARDS] {p_name}: Hôm nay +{today_p} pts | PC: {pc_p} | Mobile: {mob_p} | Tổng tích lũy: {tot_p} pts",
+            f"⭐ [ĐIỂM REWARDS] {p_name}: Khả dụng: {tot_p:,} pts | Hôm nay +{today_p} pts (PC: {pc_p}, Mobile: {mob_p}){life_str}",
             "success"
         )
         return JSONResponse({

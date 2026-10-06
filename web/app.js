@@ -352,7 +352,7 @@ function renderProfiles(profiles) {
         <div class="pts-breakdown-mini">
           <span class="pts-pill" title="Desktop Bing Search">💻 ${pcPts}</span>
           <span class="pts-pill" title="Mobile Bing Search">📱 ${mobPts}</span>
-          <span class="pts-pill pts-total-pill" title="Tổng điểm tích lũy (Lifetime)">⭐ ${totalPts}</span>
+          <span class="pts-pill pts-total-pill" title="Điểm khả dụng hiện tại (Có thể đổi quà)">⭐ ${totalPts}</span>
         </div>
       </div>
     `;
