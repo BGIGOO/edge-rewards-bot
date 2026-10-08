@@ -116,128 +116,139 @@
       </div>
     </section>
 
-    <!-- Live Session & Points Breakdown Inspector (Đúng chuẩn theo giao diện Microsoft Rewards) -->
+    <!-- Live Operations Hub: Điểm Danh App Bing & Metadata Inspector -->
     <section class="inspector-section">
       <div class="inspector-grid">
 
-        <!-- CARD 1: POINTS BREAKDOWN (Microsoft Rewards Authentic Dark Theme) -->
-        <div class="points-card">
-          <div class="points-card-header">
-            <div class="points-title-group">
-              <svg class="coin-header-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" fill="url(#coinGradHeader)" />
-                <path d="M12 7v10M9 9.5c0-1.38 1.34-2.5 3-2.5s3 1.12 3 2.5c0 2-3 2-3 3.5m0 2.5h.01" stroke="#fff"
-                  stroke-width="1.8" stroke-linecap="round" />
-                <defs>
-                  <linearGradient id="coinGradHeader" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
-                    <stop stop-color="#FFD700" />
-                    <stop offset="1" stop-color="#FF8C00" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <h3 class="points-title">Points breakdown</h3>
+        <!-- COMPONENT 1: ĐIỂM DANH APP BING (Android Mobile Check-in Hub) -->
+        <div class="checkin-card">
+          <div class="checkin-card-header">
+            <div class="checkin-title-group">
+              <div class="checkin-icon-badge">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3" stroke-linecap="round"></line>
+                  <path d="M9 6h6" stroke-linecap="round"></path>
+                </svg>
+              </div>
+              <div class="checkin-title-text">
+                <h3 class="checkin-title">Điểm Danh App Bing</h3>
+                <span class="checkin-subtitle">Android Mobile • Kết nối qua ADB Tailscale</span>
+              </div>
             </div>
 
-            <div class="points-profile-select-wrap">
-              <select id="pointsProfileSelect" class="select-profile-pill" title="Chọn tài khoản để xem chi tiết điểm">
-                <option value="live">● Đang chạy (Live)</option>
-              </select>
+            <div class="checkin-header-badge-wrap">
+              <span id="checkinStatusBadge" class="checkin-status-badge badge-idle">
+                <span class="checkin-pulse-dot"></span>
+                <span id="checkinStatusLabel">Chưa điểm danh</span>
+              </span>
             </div>
           </div>
 
-          <div class="points-card-body">
-            <!-- Today's points highlight box -->
-            <div class="todays-points-banner">
-              <div class="banner-stat-col">
-                <span class="banner-subtitle">Điểm hôm nay (Today's points)</span>
-                <div class="banner-value">
-                  <span id="pbTodayPoints" class="points-num">0</span>
-                  <span class="points-unit">pts</span>
+          <div class="checkin-card-body">
+            <!-- Grid thông số nhanh: Thiết bị, Lượt ghi nhận, Chế độ tự động -->
+            <div class="checkin-meta-row">
+              <div class="checkin-meta-item">
+                <span class="checkin-meta-label">Thiết Bị ADB</span>
+                <div class="checkin-meta-val-wrap">
+                  <span class="checkin-ping-dot"></span>
+                  <span id="checkinDevice" class="checkin-meta-val">100.71.117.39:5555</span>
                 </div>
               </div>
-              <div class="banner-divider-v"></div>
-              <div class="banner-stat-col">
-                <span class="banner-subtitle">Tổng tích lũy (Lifetime)</span>
-                <div class="banner-value">
-                  <span id="pbLifetimePoints" class="lifetime-num">0</span>
-                  <span class="points-unit">pts</span>
-                </div>
+
+              <div class="checkin-meta-item">
+                <span class="checkin-meta-label">Ghi Nhận Gần Nhất</span>
+                <span id="checkinLastTime" class="checkin-meta-val">Chưa thực hiện</span>
+              </div>
+
+              <div class="checkin-meta-item">
+                <span class="checkin-meta-label">Chế Độ Tự Động</span>
+                <span id="checkinAutoStatus" class="checkin-meta-val status-pill-active">Bật sau Search</span>
               </div>
             </div>
 
-            <!-- Activity table like the user's screenshot -->
-            <div class="activity-table-card">
-              <div class="activity-header">
-                <span>Today's activity</span>
-                <span>Points</span>
+            <!-- Callout trạng thái / Thông điệp phản hồi từ bot -->
+            <div id="checkinCallout" class="checkin-callout callout-idle">
+              <div class="callout-icon-wrap">
+                <svg id="calloutIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <div class="callout-content">
+                <span class="callout-title">Trạng Thái Thực Thi</span>
+                <p id="checkinMessageText" class="callout-desc">Sẵn sàng điểm danh tích điểm streak trên ứng dụng Microsoft Bing.</p>
+              </div>
+            </div>
+
+            <!-- Khung Ảnh Đối Soát Thực Tế (Visual ADB Screenshots) -->
+            <div class="checkin-preview-section">
+              <div class="preview-section-header">
+                <div class="preview-header-left">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #38BDF8;">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                  <span class="preview-title">Ảnh Chụp Đối Soát Màn Hình (ADB Frame)</span>
+                </div>
+                <button type="button" class="btn-xs-link" onclick="openFrameModal()">
+                  <span>🔍 Phóng to</span>
+                </button>
               </div>
 
-              <!-- Desktop Bing search -->
-              <div class="activity-row">
-                <div class="activity-name">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                  </svg>
-                  <span>Desktop Bing search</span>
+              <div id="checkinThumbStrip" class="checkin-thumbs-grid">
+                <div class="thumb-card" onclick="openFrameModal()" title="Bấm để xem ảnh phóng to">
+                  <span class="thumb-label">1. Trước Điểm Danh</span>
+                  <div class="thumb-img-wrap">
+                    <img id="checkinThumbBefore" src="/static/android_checkin_before.png" alt="Trước điểm danh" onerror="this.src='/static/android_checkin_before.png'">
+                    <span class="thumb-zoom-badge">🔍 Xem ảnh</span>
+                  </div>
                 </div>
-                <div class="activity-score">
-                  <strong id="pbDesktopEarned">0</strong><span class="score-max">/90</span>
-                </div>
-              </div>
-              <div class="progress-bar-wrap">
-                <div id="pbDesktopBar" class="progress-bar-fill desktop" style="width: 0%;"></div>
-              </div>
 
-              <!-- Mobile Bing search -->
-              <div class="activity-row">
-                <div class="activity-name">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                  </svg>
-                  <span>Mobile Bing search</span>
-                </div>
-                <div class="activity-score">
-                  <strong id="pbMobileEarned">0</strong><span class="score-max">/60</span>
-                </div>
-              </div>
-              <div class="progress-bar-wrap">
-                <div id="pbMobileBar" class="progress-bar-fill mobile" style="width: 0%;"></div>
-              </div>
-
-              <!-- Offers -->
-              <div class="activity-row">
-                <div class="activity-name">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 12 20 22 4 22 4 12"></polyline>
-                    <rect x="2" y="7" width="20" height="5"></rect>
-                    <line x1="12" y1="22" x2="12" y2="7"></line>
-                  </svg>
-                  <span>Offers & Bonus</span>
-                </div>
-                <div class="activity-score">
-                  <strong id="pbOffersEarned">0</strong>
+                <div class="thumb-card" onclick="openFrameModal()" title="Bấm để xem ảnh phóng to">
+                  <span class="thumb-label">2. Sau Khi Điểm Danh</span>
+                  <div class="thumb-img-wrap">
+                    <img id="checkinThumbAfter" src="/static/android_checkin_after.png" alt="Sau khi điểm danh" onerror="this.src='/static/android_checkin_before.png'">
+                    <span class="thumb-zoom-badge">✓ Hoàn tất</span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Android App Bing Check-in -->
-              <div class="activity-row" style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.12);">
-                <div class="activity-name">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                  </svg>
-                  <span>App Bing Check-in</span>
-                </div>
-                <div class="activity-score" style="display: flex; align-items: center; gap: 6px;">
-                  <span id="pbAndroidStatus" class="chip-status idle" style="font-size: 11px; padding: 2px 8px;">Chưa điểm danh</span>
-                  <button id="btnPreviewCheckinFrame" class="btn-xs-copy" title="Xem ảnh chụp màn hình điểm danh" onclick="openFrameModal()" style="display: inline-flex;">
-                    📷 Ảnh
-                  </button>
-                </div>
+              <div id="checkinNoThumb" class="checkin-no-thumb hidden">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>Chưa có ảnh chụp đối soát gần nhất. Bấm "Điểm Danh Ngay" để khởi chạy.</span>
               </div>
+            </div>
+
+            <!-- Thanh Hành Động (Action Toolbar) -->
+            <div class="checkin-actions-row">
+              <button id="btnCardRunCheckin" class="btn btn-primary btn-checkin-main" onclick="runAndroidCheckin()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5"></line>
+                </svg>
+                <span id="btnCardRunCheckinText">📱 Điểm Danh Ngay</span>
+              </button>
+
+              <button id="btnCardPreviewFrame" class="btn btn-secondary" onclick="openFrameModal()" title="Xem chi tiết ảnh màn hình đối soát đầy đủ">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>Màn Hình Đối Soát</span>
+              </button>
+
+              <button class="btn btn-ghost" onclick="openSettingsModal()" title="Mở cài đặt thiết bị Tailscale và PIN ADB">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>Cài Đặt</span>
+              </button>
             </div>
           </div>
         </div>

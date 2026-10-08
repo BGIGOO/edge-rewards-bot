@@ -32,15 +32,22 @@ const kpiEngineStatus = document.getElementById("kpiEngineStatus");
 const kpiEngineSub = document.getElementById("kpiEngineSub");
 const logCounter = document.getElementById("logCounter");
 
-// Inspector & Points Breakdown DOM References
-const pointsProfileSelect = document.getElementById("pointsProfileSelect");
-const pbTodayPoints = document.getElementById("pbTodayPoints");
-const pbLifetimePoints = document.getElementById("pbLifetimePoints");
-const pbDesktopEarned = document.getElementById("pbDesktopEarned");
-const pbDesktopBar = document.getElementById("pbDesktopBar");
-const pbMobileEarned = document.getElementById("pbMobileEarned");
-const pbMobileBar = document.getElementById("pbMobileBar");
-const pbOffersEarned = document.getElementById("pbOffersEarned");
+// Bing App Check-in Component DOM References
+const checkinStatusBadge = document.getElementById("checkinStatusBadge");
+const checkinStatusLabel = document.getElementById("checkinStatusLabel");
+const checkinDevice = document.getElementById("checkinDevice");
+const checkinLastTime = document.getElementById("checkinLastTime");
+const checkinAutoStatus = document.getElementById("checkinAutoStatus");
+const checkinCallout = document.getElementById("checkinCallout");
+const checkinMessageText = document.getElementById("checkinMessageText");
+const calloutIcon = document.getElementById("calloutIcon");
+const checkinThumbStrip = document.getElementById("checkinThumbStrip");
+const checkinNoThumb = document.getElementById("checkinNoThumb");
+const checkinThumbBefore = document.getElementById("checkinThumbBefore");
+const checkinThumbAfter = document.getElementById("checkinThumbAfter");
+const btnCardRunCheckin = document.getElementById("btnCardRunCheckin");
+const btnCardRunCheckinText = document.getElementById("btnCardRunCheckinText");
+const btnCardPreviewFrame = document.getElementById("btnCardPreviewFrame");
 
 const metaModeBadge = document.getElementById("metaModeBadge");
 const metaIpAddress = document.getElementById("metaIpAddress");
@@ -1155,28 +1162,44 @@ async function runAndroidCheckin() {
     return;
   }
   try {
+    // Cập nhật trạng thái loading tức thì trên cả 2 nút
     if (btnRunAndroidCheckin) {
       btnRunAndroidCheckin.disabled = true;
       btnRunAndroidCheckin.innerHTML = `<span>⏳ Đang chạy...</span>`;
     }
+    if (btnCardRunCheckin) {
+      btnCardRunCheckin.disabled = true;
+    }
+    if (btnCardRunCheckinText) {
+      btnCardRunCheckinText.innerText = "⏳ Đang kết nối ADB...";
+    }
+    if (checkinStatusBadge) {
+      checkinStatusBadge.className = "checkin-status-badge badge-running";
+    }
+    if (checkinStatusLabel) {
+      checkinStatusLabel.innerText = "⏳ Đang điểm danh...";
+    }
+    if (checkinCallout) {
+      checkinCallout.className = "checkin-callout callout-running";
+    }
+    if (checkinMessageText) {
+      checkinMessageText.innerText = "Đang kết nối thiết bị Android và tự động điểm danh trên App Bing...";
+    }
+
     const res = await fetch("/api/android/checkin", { method: "POST" });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Lỗi khởi chạy");
+    
+    // Tải lại status hệ thống
     loadStatus();
+    loadAndroidStatus();
   } catch (err) {
     alert(`Lỗi điểm danh Android: ${err.message}`);
+    loadAndroidStatus();
   } finally {
     setTimeout(() => {
-      if (btnRunAndroidCheckin) {
-        btnRunAndroidCheckin.disabled = false;
-        btnRunAndroidCheckin.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-          </svg>
-          <span>📱 Điểm Danh App Bing</span>`;
-      }
-    }, 2000);
+      loadAndroidStatus();
+    }, 2500);
   }
 }
 
@@ -1186,23 +1209,106 @@ async function loadAndroidStatus() {
     if (!res.ok) return;
     const data = await res.json();
     const latest = data.latest || {};
+    const config = data.config || {};
     const status = latest.status || "pending";
+    const isRunning = Boolean(data.is_running);
 
-    if (pbAndroidStatus) {
-      if (status === "completed") {
-        pbAndroidStatus.className = "chip-status connected";
-        pbAndroidStatus.innerText = "✓ Đã điểm danh";
-      } else if (status === "failed" || status === "error") {
-        pbAndroidStatus.className = "chip-status disconnected";
-        pbAndroidStatus.innerText = "! Lỗi/Chưa xong";
-      } else {
-        pbAndroidStatus.className = "chip-status idle";
-        pbAndroidStatus.innerText = "Chưa điểm danh";
+    // 1. Cập nhật thiết bị ADB & Lượt ghi nhận & Auto mode
+    if (checkinDevice) {
+      checkinDevice.innerText = config.device_address || latest.device || "100.71.117.39:5555";
+    }
+    if (checkinLastTime) {
+      checkinLastTime.innerText = latest.created_at || "Hôm nay (Chưa có log)";
+    }
+    if (checkinAutoStatus) {
+      const isAuto = config.auto_checkin_after_search !== false;
+      checkinAutoStatus.innerText = isAuto ? "Bật sau Search" : "Chạy thủ công";
+      checkinAutoStatus.className = `checkin-meta-val ${isAuto ? "status-pill-active" : ""}`;
+    }
+
+    // 2. Cập nhật Status Badge, Callout & Nút bấm
+    if (isRunning) {
+      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-running";
+      if (checkinStatusLabel) checkinStatusLabel.innerText = "⏳ Đang điểm danh...";
+      if (checkinCallout) checkinCallout.className = "checkin-callout callout-running";
+      if (checkinMessageText) checkinMessageText.innerText = "Tiến trình bot đang điều khiển App Bing trên điện thoại Android...";
+      
+      if (btnCardRunCheckin) btnCardRunCheckin.disabled = true;
+      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "⏳ Đang chạy...";
+      if (btnRunAndroidCheckin) {
+        btnRunAndroidCheckin.disabled = true;
+        btnRunAndroidCheckin.innerHTML = `<span>⏳ Đang chạy...</span>`;
+      }
+    } else if (status === "completed") {
+      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-success";
+      if (checkinStatusLabel) checkinStatusLabel.innerText = "✓ Đã điểm danh hôm nay";
+      if (checkinCallout) checkinCallout.className = "checkin-callout callout-success";
+      if (checkinMessageText) checkinMessageText.innerText = latest.message || "Điểm danh thành công! Đã tích lũy điểm thưởng streak hôm nay.";
+
+      if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
+      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "🔄 Điểm Danh Lại";
+      if (btnRunAndroidCheckin) {
+        btnRunAndroidCheckin.disabled = false;
+        btnRunAndroidCheckin.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>📱 Điểm Danh App Bing</span>`;
+      }
+    } else if (status === "failed" || status === "error") {
+      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-error";
+      if (checkinStatusLabel) checkinStatusLabel.innerText = "! Lỗi / Chưa xong";
+      if (checkinCallout) checkinCallout.className = "checkin-callout callout-error";
+      if (checkinMessageText) checkinMessageText.innerText = latest.message || "Lần chạy gần nhất kết thúc với lỗi hoặc không tìm thấy nút Rewards.";
+
+      if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
+      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "⚡ Thử Lại Ngay";
+      if (btnRunAndroidCheckin) {
+        btnRunAndroidCheckin.disabled = false;
+        btnRunAndroidCheckin.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>📱 Điểm Danh App Bing</span>`;
+      }
+    } else {
+      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-idle";
+      if (checkinStatusLabel) checkinStatusLabel.innerText = "Chưa điểm danh";
+      if (checkinCallout) checkinCallout.className = "checkin-callout callout-idle";
+      if (checkinMessageText) checkinMessageText.innerText = latest.message || "Sẵn sàng điểm danh tích điểm streak trên ứng dụng Microsoft Bing.";
+
+      if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
+      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "📱 Điểm Danh Ngay";
+      if (btnRunAndroidCheckin) {
+        btnRunAndroidCheckin.disabled = false;
+        btnRunAndroidCheckin.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>📱 Điểm Danh App Bing</span>`;
       }
     }
 
-    if (btnPreviewCheckinFrame) {
-      btnPreviewCheckinFrame.style.display = (latest.frame_before || latest.frame_after) ? "inline-flex" : "none";
+    // 3. Cập nhật ảnh chụp màn hình đối soát (Thumbnails)
+    const hasFrames = Boolean(latest.frame_before || latest.frame_after);
+    const t = Date.now();
+    if (checkinThumbStrip && checkinNoThumb) {
+      if (hasFrames) {
+        checkinThumbStrip.classList.remove("hidden");
+        checkinNoThumb.classList.add("hidden");
+        if (checkinThumbBefore) checkinThumbBefore.src = `/static/android_checkin_before.png?t=${t}`;
+        if (checkinThumbAfter) checkinThumbAfter.src = `/static/android_checkin_after.png?t=${t}`;
+      } else {
+        checkinThumbStrip.classList.add("hidden");
+        checkinNoThumb.classList.remove("hidden");
+      }
+    }
+
+    if (btnCardPreviewFrame) {
+      btnCardPreviewFrame.style.display = hasFrames ? "inline-flex" : "none";
     }
 
     if (frameDetails) {
@@ -1280,83 +1386,11 @@ async function recoverLiveSearchesFromLogs() {
 }
 
 function populatePointsProfileSelect() {
-  if (!pointsProfileSelect) return;
-  const currentVal = pointsProfileSelect.value;
-  pointsProfileSelect.innerHTML = `<option value="live">● Đang chạy (Live Tracker)</option>`;
-  if (appState.profiles && appState.profiles.length > 0) {
-    appState.profiles.forEach(p => {
-      const opt = document.createElement("option");
-      opt.value = p.id;
-      opt.innerText = `Acc #${p.id} - ${p.name}`;
-      pointsProfileSelect.appendChild(opt);
-    });
-  }
-  if (currentVal && Array.from(pointsProfileSelect.options).some(o => o.value === currentVal)) {
-    pointsProfileSelect.value = currentVal;
-  }
-  updateInspectorPointsUI();
+  // Component Points breakdown đã được gỡ bỏ hoàn toàn theo yêu cầu người dùng
 }
 
 function updateInspectorPointsUI() {
-  const selectVal = pointsProfileSelect ? pointsProfileSelect.value : "live";
-  let desktopStr = "0/90";
-  let mobileStr = "0/60";
-  let offersEarned = 0;
-  let todayTotal = 0;
-  let lifetimeTotal = 0;
-
-  if (selectVal === "live") {
-    const currentPid = appState.currentTask?.profile_id;
-    const runningProfile = currentPid ? appState.profiles.find(p => String(p.id) === String(currentPid)) : null;
-
-    if (runningProfile) {
-      todayTotal = runningProfile.today_points || 0;
-      lifetimeTotal = runningProfile.total_points || 0;
-      desktopStr = runningProfile.desktop_points || "0/90";
-      mobileStr = runningProfile.mobile_points || "0/60";
-      offersEarned = runningProfile.offers_points || 0;
-    } else {
-      const pcEarned = Math.min(90, appState.liveSearches.desktopCount * 3);
-      const mobEarned = Math.min(60, appState.liveSearches.mobileCount * 3);
-      desktopStr = `${pcEarned}/90`;
-      mobileStr = `${mobEarned}/60`;
-      todayTotal = pcEarned + mobEarned;
-    }
-  } else {
-    const profile = appState.profiles.find(p => String(p.id) === String(selectVal));
-    if (profile) {
-      todayTotal = profile.today_points || 0;
-      lifetimeTotal = profile.total_points || 0;
-      desktopStr = profile.desktop_points || "0/90";
-      mobileStr = profile.mobile_points || "0/60";
-      offersEarned = profile.offers_points || 0;
-    }
-  }
-
-  // Parse numerator/denominator an toàn
-  const parseFrac = (str, defMax) => {
-    if (!str || typeof str !== "string") return { cur: 0, max: defMax };
-    const parts = str.split("/").map(s => parseInt(s.trim(), 10));
-    return { cur: isNaN(parts[0]) ? 0 : parts[0], max: isNaN(parts[1]) ? defMax : parts[1] };
-  };
-
-  const pcFrac = parseFrac(desktopStr, 90);
-  const mobFrac = parseFrac(mobileStr, 60);
-
-  if (pbTodayPoints) pbTodayPoints.innerText = todayTotal;
-  if (pbLifetimePoints) pbLifetimePoints.innerText = lifetimeTotal ? lifetimeTotal.toLocaleString() : "0";
-  if (pbDesktopEarned) pbDesktopEarned.innerText = pcFrac.cur;
-  if (pbMobileEarned) pbMobileEarned.innerText = mobFrac.cur;
-  if (pbOffersEarned) pbOffersEarned.innerText = offersEarned;
-
-  if (pbDesktopBar) {
-    const pcPct = pcFrac.max > 0 ? Math.min(100, Math.round((pcFrac.cur / pcFrac.max) * 100)) : 0;
-    pbDesktopBar.style.width = `${pcPct}%`;
-  }
-  if (pbMobileBar) {
-    const mobPct = mobFrac.max > 0 ? Math.min(100, Math.round((mobFrac.cur / mobFrac.max) * 100)) : 0;
-    pbMobileBar.style.width = `${mobPct}%`;
-  }
+  // Component Points breakdown đã được gỡ bỏ hoàn toàn theo yêu cầu người dùng
 }
 
 function copyUserAgent() {
