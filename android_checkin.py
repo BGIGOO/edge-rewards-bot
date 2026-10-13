@@ -13,7 +13,8 @@ import time
 import random
 import subprocess
 import argparse
-import io
+import re
+import shutil
 from datetime import datetime
 
 # Đảm bảo console Windows hỗ trợ UTF-8
@@ -41,20 +42,28 @@ def find_adb_path():
         # 2. Android SDK tiêu chuẩn
         os.path.expandvars(r"%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"),
         os.path.expandvars(r"%PROGRAMFILES%\Android\platform-tools\adb.exe"),
-        # 3. Lệnh trong PATH
-        "adb"
+        r"C:\platform-tools\adb.exe",
+        r"D:\platform-tools\adb.exe",
+        r"C:\scrcpy\adb.exe",
+        r"D:\scrcpy\adb.exe",
     ]
     for c in candidates:
         if os.path.isabs(c) and os.path.exists(c):
             return c
-    # Thử gọi 'adb' xem có trong PATH không
+    
+    # Kiểm tra trong PATH
+    which_adb = shutil.which("adb")
+    if which_adb and os.path.exists(which_adb):
+        return which_adb
+
     try:
-        r = subprocess.run(["adb", "version"], capture_output=True, text=True, timeout=5)
+        r = subprocess.run(["adb", "version"], capture_output=True, text=True, timeout=3)
         if r.returncode == 0:
             return "adb"
     except Exception:
         pass
-    # Mặc định fallback
+
+    # Mặc định fallback SDK
     return candidates[2]
 
 
@@ -82,20 +91,61 @@ def human_sleep(a=2.0, b=5.0):
     time.sleep(random.uniform(a, b))
 
 
+def ping_host(host, timeout_ms=1200):
+    """
+    Ping kiểm tra xem IP Tailscale có thông mạng không.
+    Trả về (True, ping_ms) hoặc (False, None).
+    """
+    try:
+        cmd = ["ping", "-n", "1", "-w", str(timeout_ms), str(host)]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=(timeout_ms / 1000) + 1.5)
+        if r.returncode == 0:
+            m = re.search(r"time[=<](\d+)ms", r.stdout)
+            ping_ms = int(m.group(1)) if m else 30
+            return True, ping_ms
+    except Exception:
+        pass
+    return False, None
+
+
+def get_adb_device_state(adb_path, device_address):
+    """
+    Lấy trạng thái thiết bị trong danh sách `adb devices`:
+    - 'device': Đã kết nối và sẵn sàng nhận lệnh
+    - 'offline': Thiết bị đang ngoại tuyến / cổng stale
+    - 'unauthorized': Thiết bị chưa cấp quyền gỡ lỗi USB/Wi-Fi
+    - 'disconnected': Chưa có trong danh sách
+    """
+    try:
+        r = subprocess.run([adb_path, "devices"], capture_output=True, text=True, timeout=5)
+        for line in r.stdout.splitlines():
+            line = line.strip()
+            if not line or line.startswith("List of devices"):
+                continue
+            parts = line.split()
+            if len(parts) >= 2 and parts[0] == device_address:
+                return parts[1]
+    except Exception:
+        pass
+    return "disconnected"
+
+
 class AndroidBingCheckinBot:
     def __init__(self, device=DEFAULT_DEVICE, pin=None, package="com.microsoft.bing"):
         self.device = device
+        self.host = device.split(":")[0] if ":" in device else device
+        self.port = device.split(":")[1] if ":" in device else "5555"
         self.pin = pin or os.environ.get("BING_BOT_PIN")
         self.package = package
         self.adb = find_adb_path()
         self.screen_width = 720
         self.screen_height = 1612
 
-    def _run_adb_raw(self, *args, timeout=30):
+    def _run_adb_raw(self, *args, timeout=25):
         cmd = [self.adb, "-s", self.device, *args]
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
-    def _adb_shell(self, *args, timeout=30):
+    def _adb_shell(self, *args, timeout=25):
         """Chạy lệnh adb shell, tự động kết nối lại nếu rớt mạng Tailscale"""
         try:
             r = self._run_adb_raw("shell", *args, timeout=timeout)
@@ -103,7 +153,7 @@ class AndroidBingCheckinBot:
             log(f"ADB Shell timeout hoặc lỗi I/O ({e}), đang nối lại thiết bị...", "warn")
             r = None
 
-        if r is None or r.returncode != 0 or "device not found" in (r.stderr or ""):
+        if r is None or r.returncode != 0 or "device not found" in (r.stderr or "") or "device offline" in (r.stderr or ""):
             self.ensure_connected()
             r = self._run_adb_raw("shell", *args, timeout=timeout)
 
@@ -112,40 +162,167 @@ class AndroidBingCheckinBot:
             raise RuntimeError(f"Lệnh adb shell thất bại ({' '.join(args)}): {err}")
         return (r.stdout or "").strip()
 
-    def ensure_connected(self, max_retries=3):
+    def get_device_status(self):
+        """
+        Kiểm tra trạng thái kết nối mạng Tailscale, ADB và app Bing (nhanh, không block):
+        - ping_ok: bool
+        - ping_ms: int or None
+        - adb_state: 'device' | 'offline' | 'unauthorized' | 'disconnected'
+        - is_connected: bool
+        - app_status: 'foreground' | 'background' | 'closed' | 'unreachable'
+        - app_running: bool
+        - app_foreground: bool
+        - screen_unlocked: bool or None
+        - message: str
+        """
+        # 1. Kiểm tra mạng Tailscale (ping nhanh trong 800ms)
+        is_ping, ping_ms = ping_host(self.host, timeout_ms=800)
+        if not is_ping:
+            return {
+                "ping_ok": False,
+                "ping_ms": None,
+                "adb_state": "disconnected",
+                "is_connected": False,
+                "app_status": "unreachable",
+                "app_running": False,
+                "app_foreground": False,
+                "screen_unlocked": None,
+                "message": f"Không thể ping tới IP Tailscale ({self.host}). Vui lòng mở VPN Tailscale trên máy tính & điện thoại!"
+            }
+
+        # 2. Kiểm tra trạng thái ADB hiện tại từ daemon
+        adb_state = get_adb_device_state(self.adb, self.device)
+
+        if adb_state != "device":
+            desc = "Cổng ADB 5555 chưa mở" if adb_state == "disconnected" else f"ADB {adb_state}"
+            return {
+                "ping_ok": True,
+                "ping_ms": ping_ms,
+                "adb_state": adb_state,
+                "is_connected": False,
+                "app_status": "unreachable",
+                "app_running": False,
+                "app_foreground": False,
+                "screen_unlocked": None,
+                "message": f"Mạng Tailscale thông tốt ({ping_ms}ms), nhưng {desc}. Hãy bật 'Gỡ lỗi qua Wi-Fi' trên điện thoại!"
+            }
+
+        # 3. Đã kết nối ADB -> Kiểm tra màn hình & ứng dụng Bing
+        is_run = self.is_app_running()
+        is_fg = self.is_app_foreground() if is_run else False
+        unlocked = self.is_screen_unlocked()
+
+        if is_fg:
+            app_status = "foreground"
+            app_desc = "App Bing đang mở trên màn hình điện thoại"
+        elif is_run:
+            app_status = "background"
+            app_desc = "App Bing đang chạy ngầm trong bộ nhớ"
+        else:
+            app_status = "closed"
+            app_desc = "App Bing đang tắt (chưa mở)"
+
+        return {
+            "ping_ok": True,
+            "ping_ms": ping_ms,
+            "adb_state": "device",
+            "is_connected": True,
+            "app_status": app_status,
+            "app_running": is_run,
+            "app_foreground": is_fg,
+            "screen_unlocked": unlocked,
+            "message": app_desc
+        }
+
+    def reconnect_device(self):
+        """Chủ động kết nối lại thiết bị ADB qua Tailscale"""
+        is_ping, ping_ms = ping_host(self.host, timeout_ms=800)
+        if not is_ping:
+            return {
+                "success": False,
+                "message": f"Không thể ping IP Tailscale ({self.host}). Hãy mở VPN Tailscale trên máy tính & điện thoại!"
+            }
+
+        try:
+            # Ngắt kết nối cũ nếu có để làm sạch trạng thái
+            subprocess.run([self.adb, "disconnect", self.device], capture_output=True, timeout=3)
+            r = subprocess.run([self.adb, "connect", self.device], capture_output=True, text=True, timeout=5)
+            time.sleep(0.5)
+            state = get_adb_device_state(self.adb, self.device)
+            if state == "device":
+                self._detect_screen_size()
+                return {
+                    "success": True,
+                    "message": f"Kết nối ADB thành công tới {self.device} qua Tailscale (Độ trễ: {ping_ms}ms)!"
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": f"Ping Tailscale OK ({ping_ms}ms) nhưng không thể mở ADB qua cổng {self.port}. Hãy bật 'Gỡ lỗi qua Wi-Fi' trên điện thoại."
+                }
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "message": f"Ping Tailscale OK ({ping_ms}ms) nhưng cổng ADB {self.port} không phản hồi. Hãy bật 'Gỡ lỗi qua Wi-Fi' trên điện thoại."
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Lỗi khi kết nối ADB: {e}"}
+
+    def ensure_connected(self, max_retries=1):
         """Đảm bảo thiết bị đã kết nối qua ADB Tailscale/Wi-Fi"""
         log(f"Kiểm tra kết nối tới thiết bị {self.device}...", "action")
-        for i in range(max_retries):
-            try:
-                # Kiểm tra danh sách thiết bị
-                res = subprocess.run([self.adb, "devices"], capture_output=True, text=True, timeout=10)
-                if self.device in res.stdout and "device" in res.stdout:
-                    # Ping thử lệnh echo
-                    test = self._run_adb_raw("shell", "echo", "alive", timeout=10)
-                    if test.returncode == 0:
-                        log(f"Thiết bị {self.device} đã sẵn sàng!", "success")
-                        self._detect_screen_size()
-                        return True
 
-                log(f"Đang kết nối lại tới {self.device} (lần {i+1}/{max_retries})...", "warn")
-                subprocess.run([self.adb, "connect", self.device], capture_output=True, text=True, timeout=15)
-                time.sleep(2)
-            except Exception as e:
-                log(f"Lỗi khi kết nối lần {i+1}: {e}", "warn")
-                time.sleep(3)
+        # Bước 1: Kiểm tra ping Tailscale trước
+        is_ping, ping_ms = ping_host(self.host, timeout_ms=800)
+        if not is_ping:
+            raise ConnectionError(
+                f"Mất kết nối mạng Tailscale tới {self.host}! Vui lòng bật VPN Tailscale trên máy tính và điện thoại."
+            )
+        log(f"Mạng Tailscale phản hồi tốt (Độ trễ: {ping_ms}ms).", "info")
+
+        # Bước 2: Kiểm tra trạng thái ADB
+        state = get_adb_device_state(self.adb, self.device)
+        if state == "device":
+            test = self._run_adb_raw("shell", "echo", "alive", timeout=5)
+            if test.returncode == 0 and "alive" in test.stdout:
+                log(f"Thiết bị {self.device} đã sẵn sàng!", "success")
+                self._detect_screen_size()
+                return True
+
+        if state == "offline":
+            log(f"Thiết bị ở trạng thái offline, ngắt kết nối...", "warn")
+            try:
+                subprocess.run([self.adb, "disconnect", self.device], capture_output=True, timeout=3)
+            except Exception:
+                pass
+
+        log(f"Đang kết nối lại ADB tới {self.device}...", "warn")
+        try:
+            subprocess.run([self.adb, "connect", self.device], capture_output=True, text=True, timeout=5)
+            time.sleep(0.8)
+        except subprocess.TimeoutExpired:
+            raise ConnectionError(
+                f"Ping Tailscale OK ({ping_ms}ms) nhưng cổng ADB 5555 không phản hồi. Hãy bật 'Gỡ lỗi qua Wi-Fi' trên điện thoại!"
+            )
+        except Exception as e:
+            raise ConnectionError(f"Lỗi khi kết nối ADB: {e}")
 
         # Kiểm tra lần cuối
-        res = subprocess.run([self.adb, "devices"], capture_output=True, text=True, timeout=10)
-        if self.device in res.stdout:
+        final_state = get_adb_device_state(self.adb, self.device)
+        if final_state == "device":
             log(f"Kết nối thành công tới {self.device}!", "success")
             self._detect_screen_size()
             return True
-        raise ConnectionError(f"Không thể kết nối tới điện thoại {self.device} qua Tailscale!")
+
+        raise ConnectionError(
+            f"Không thể kết nối cổng ADB {self.device} qua Tailscale (trạng thái: {final_state}). "
+            f"Vui lòng bật 'Gỡ lỗi không dây (Wireless Debugging)' trên điện thoại!"
+        )
 
     def _detect_screen_size(self):
         """Tự động phát hiện độ phân giải màn hình thực tế của điện thoại"""
         try:
-            out = self._run_adb_raw("shell", "wm", "size", timeout=10).stdout
+            out = self._run_adb_raw("shell", "wm", "size", timeout=8).stdout
             for line in out.splitlines():
                 if "Physical size:" in line:
                     dims = line.split(":")[-1].strip().split("x")
@@ -158,54 +335,130 @@ class AndroidBingCheckinBot:
         self.screen_width = 720
         self.screen_height = 1612
 
-    def is_screen_unlocked(self):
-        """Kiểm tra màn hình đã mở khóa chưa"""
+    def is_screen_awake(self):
+        """Kiểm tra màn hình đang SÁNG (Awake) hay TẮT (Asleep)"""
         try:
-            out = self._adb_shell("dumpsys", "window")
-            return "mDreamingLockscreen=false" in out or "mShowingDream=false" in out
+            out = self._run_adb_raw("shell", "dumpsys", "power", timeout=5).stdout
+            for line in out.splitlines():
+                if "mWakefulness=" in line:
+                    return "mWakefulness=Awake" in line
         except Exception:
-            return True
+            pass
+        return True
+
+    def is_device_locked(self):
+        """Kiểm tra điện thoại có đang bị khóa (Keyguard / Lockscreen) không"""
+        try:
+            out_win = self._run_adb_raw("shell", "dumpsys window | grep -E 'isKeyguardShowing|showing='", timeout=5).stdout
+            if "isKeyguardShowing=true" in out_win or "showing=true" in out_win:
+                return True
+            if "isKeyguardShowing=false" in out_win or "showing=false" in out_win:
+                return False
+
+            out_trust = self._run_adb_raw("shell", "dumpsys trust | grep deviceLocked=", timeout=5).stdout
+            if "deviceLocked=1" in out_trust or "deviceLocked=true" in out_trust:
+                return True
+        except Exception:
+            pass
+        return False
+
+    def is_screen_unlocked(self):
+        """Kiểm tra màn hình đã mở khóa hoàn toàn chưa (màn hình sáng + không bị khóa)"""
+        return self.is_screen_awake() and (not self.is_device_locked())
 
     def unlock_device(self):
-        """Tự động đánh thức và mở khóa điện thoại (nếu có PIN)"""
-        if self.is_screen_unlocked():
-            log("Điện thoại đã được mở khóa sẵn.", "info")
-            return
-
-        log("Màn hình đang khóa, tiến hành đánh thức và mở khóa...", "action")
-        # Đánh thức màn hình
-        self._adb_shell("input", "keyevent", "KEYCODE_WAKEUP")
-        human_sleep(1.0, 1.5)
-
-        # Vuốt màn hình lên để mở màn hình nhập PIN / hình vẽ
-        mid_x = self.screen_width // 2
-        start_y = int(self.screen_height * 0.85)
-        end_y = int(self.screen_height * 0.35)
-        self._adb_shell("input", "swipe", str(mid_x), str(start_y), str(mid_x), str(end_y), "300")
-        human_sleep(1.0, 1.5)
-
-        if self.pin:
-            log("Nhập mã PIN mở khóa (ẩn bảo mật)...", "action")
-            # Gửi mã pin qua lệnh adb trực tiếp
-            subprocess.run([self.adb, "-s", self.device, "shell", "input", "text", str(self.pin)],
-                           capture_output=True, timeout=20)
-            human_sleep(0.5, 1.0)
-            self._adb_shell("input", "keyevent", "KEYCODE_ENTER")
-            human_sleep(1.5, 2.0)
+        """Tự động kiểm tra thông minh trước khi đánh thức & mở khóa"""
+        # Bước 1: Kiểm tra màn hình có đang thức không
+        if not self.is_screen_awake():
+            log("Màn hình đang TẮT. Đang gửi lệnh đánh thức (KEYCODE_WAKEUP)...", "action")
+            self._adb_shell("input", "keyevent", "KEYCODE_WAKEUP")
+            human_sleep(1.0, 1.5)
         else:
-            log("Không có mã PIN, thử mở khóa bằng vuốt thông thường...", "info")
+            log("Màn hình ĐÃ SÁNG SẴN (Bỏ qua bước đánh thức).", "info")
 
-        if not self.is_screen_unlocked():
-            log("Cảnh báo: Chưa xác nhận được trạng thái mở khóa.", "warn")
+        # Bước 2: Kiểm tra có đang ở màn hình khóa (Keyguard) không
+        if self.is_device_locked():
+            log("Điện thoại ĐANG KHÓA. Vuốt màn hình lên và nhập mã PIN...", "action")
+            mid_x = self.screen_width // 2
+            start_y = int(self.screen_height * 0.82)
+            end_y = int(self.screen_height * 0.30)
+            self._adb_shell("input", "swipe", str(mid_x), str(start_y), str(mid_x), str(end_y), "300")
+            human_sleep(1.0, 1.5)
+
+            if self.pin:
+                log("Nhập mã PIN mở khóa (bảo mật)...", "action")
+                subprocess.run([self.adb, "-s", self.device, "shell", "input", "text", str(self.pin)],
+                               capture_output=True, timeout=15)
+                human_sleep(0.5, 1.0)
+                self._adb_shell("input", "keyevent", "KEYCODE_ENTER")
+                human_sleep(1.5, 2.0)
+            log("Đã hoàn tất mở khóa điện thoại!", "success")
         else:
-            log("Điện thoại đã mở khóa thành công!", "success")
+            log("Điện thoại ĐÃ MỞ KHÓA SẴN! Bỏ qua vuốt màn hình và gõ PIN.", "success")
+
+    def is_app_running(self):
+        """Kiểm tra package Bing có tiến trình đang chạy không"""
+        try:
+            r = self._run_adb_raw("shell", "pidof", self.package, timeout=6)
+            if r.returncode == 0 and r.stdout.strip():
+                return True
+            # Fallback ps
+            r2 = self._run_adb_raw("shell", "ps", "-A", timeout=6)
+            return self.package in r2.stdout
+        except Exception:
+            return False
+
+    def is_app_foreground(self):
+        """Kiểm tra ứng dụng Bing có đang hiển thị trực tiếp trên màn hình không"""
+        try:
+            r = self._run_adb_raw("shell", "dumpsys", "window", "windows", timeout=6)
+            if r.returncode == 0 and any(
+                ("mCurrentFocus" in line or "mFocusedApp" in line) and self.package in line
+                for line in r.stdout.splitlines()
+            ):
+                return True
+            r2 = self._run_adb_raw("shell", "dumpsys", "activity", "activities", timeout=6)
+            if r2.returncode == 0 and any(
+                ("mResumedActivity" in line or "topResumedActivity" in line) and self.package in line
+                for line in r2.stdout.splitlines()
+            ):
+                return True
+        except Exception:
+            pass
+        return False
+
+    def open_app(self):
+        """Mở ứng dụng Microsoft Bing trên điện thoại"""
+        self.ensure_connected()
+        self.unlock_device()
+        log(f"Đang mở ứng dụng {self.package}...", "action")
+        self._adb_shell("monkey", "-p", self.package, "-c", "android.intent.category.LAUNCHER", "1")
+        time.sleep(2.5)
+        is_fg = self.is_app_foreground()
+        is_run = self.is_app_running()
+        if is_fg or is_run:
+            log(f"Ứng dụng {self.package} đã được mở thành công!", "success")
+            return {"success": True, "message": "Đã mở App Bing thành công!", "foreground": is_fg}
+        return {"success": False, "message": "Đã gửi lệnh mở nhưng chưa xác nhận được tiến trình.", "foreground": False}
+
+    def close_app(self):
+        """Tắt (buộc dừng) ứng dụng Bing trên điện thoại"""
+        self.ensure_connected()
+        log(f"Đang tắt (buộc dừng) ứng dụng {self.package}...", "action")
+        self._adb_shell("am", "force-stop", self.package)
+        time.sleep(1.0)
+        is_run = self.is_app_running()
+        if not is_run:
+            log(f"Ứng dụng {self.package} đã được tắt hoàn toàn!", "success")
+            return {"success": True, "message": "Đã tắt App Bing thành công!"}
+        return {"success": False, "message": "Gửi lệnh force-stop nhưng ứng dụng vẫn còn chạy."}
 
     def capture_screenshot(self, save_path=None):
         """
         Chụp ảnh màn hình qua ADB và lưu vào save_path hoặc trả về PIL Image.
-        Tối ưu hóa chạy qua đường hầm Tailscale trên Windows: chụp vào /sdcard/ rồi pull về.
+        Sử dụng /data/local/tmp/ luôn có quyền ghi không cần storage permission.
         """
-        remote_tmp = "/sdcard/checkin_snap.png"
+        remote_tmp = "/data/local/tmp/checkin_snap.png"
         local_target = save_path or os.path.join(SCRIPT_DIR, "scratch", "checkin_snap.png")
         os.makedirs(os.path.dirname(os.path.abspath(local_target)), exist_ok=True)
 
@@ -246,10 +499,10 @@ class AndroidBingCheckinBot:
         b = arr[:, :, 2].astype(int)
 
         # Ngưỡng màu cam của viền thẻ điểm danh Bing
-        orange = (r > 200) & (g > 105) & (g < 200) & (b < 120)
+        orange = (r > 190) & (g > 95) & (g < 205) & (b < 130)
 
-        # Vùng thẻ điểm danh thường nằm ở khoảng 25% - 46% chiều cao màn hình sau 1 lần vuốt
-        y0, y1 = int(h * 0.25), int(h * 0.46)
+        # Quét dải từ 15% đến 70% chiều cao màn hình sau khi vuốt
+        y0, y1 = int(h * 0.15), int(h * 0.70)
         band = orange[y0:y1, :]
         colsum = band.sum(axis=0)
 
@@ -257,7 +510,7 @@ class AndroidBingCheckinBot:
             log("Không phát hiện dải màu cam của thẻ điểm danh trong vùng quét.", "warn")
             return None
 
-        thresh = colsum.max() * 0.25
+        thresh = colsum.max() * 0.22
         groups = []
         in_g = False
         start = 0
@@ -272,7 +525,7 @@ class AndroidBingCheckinBot:
         if in_g:
             groups.append((start, len(colsum)))
 
-        groups = [(a, z) for a, z in groups if z - a > 12]
+        groups = [(a, z) for a, z in groups if z - a > 10]
         groups.sort()
 
         log(f"Phát hiện {len(groups)} vòng tròn ngày trong thẻ điểm danh.", "info")
@@ -298,6 +551,37 @@ class AndroidBingCheckinBot:
 
         return None
 
+    def check_daily_streak_status(self, img):
+        """
+        Kiểm tra trạng thái thẻ 'Chuỗi liên tiếp' trên App Bing phiên bản mới (Việt Nam):
+        - Quét vùng hàng đầu tiên 'Đăng ký vào' (Check-in 5 điểm)
+        - Phát hiện dấu checkmark màu xanh lá đặc trưng (✓) tại vị trí huy hiệu
+        Trả về (already_done: bool, tap_coords: tuple (x, y))
+        """
+        w, h = img.size
+        arr = np.asarray(img)
+
+        # Vùng huy hiệu dấu check của hàng 'Đăng ký vào'
+        # X: 60% - 75% chiều rộng (khoảng 440 - 530 trên 720p)
+        # Y: 30% - 50% chiều cao sau khi vuốt (khoảng 500 - 800 trên 1612p)
+        x0, x1 = int(w * 0.61), int(w * 0.73)
+        y0, y1 = int(h * 0.31), int(h * 0.50)
+
+        patch = arr[y0:y1, x0:x1].astype(int)
+        r, g, b = patch[:, :, 0], patch[:, :, 1], patch[:, :, 2]
+        green_mask = (g > 120) & (g > r + 50) & (g > b + 30)
+        green_pixels = int(green_mask.sum())
+
+        card_tap_x = int(w * 0.50)
+        card_tap_y = int(h * 0.417)  # ~ 672 trên 1612p
+
+        if green_pixels > 50:
+            log(f"Phát hiện dấu check xanh lá ({green_pixels} px) trên hàng 'Đăng ký vào' -> Đã điểm danh!", "success")
+            return True, (card_tap_x, card_tap_y)
+
+        log(f"Hàng 'Đăng ký vào' chưa có dấu check xanh lá ({green_pixels} px) -> Chưa điểm danh hôm nay.", "info")
+        return False, (card_tap_x, card_tap_y)
+
     def execute_checkin(self):
         """Quy trình tự động hóa điểm danh đầy đủ"""
         log("=======================================================", "action")
@@ -318,24 +602,30 @@ class AndroidBingCheckinBot:
         # 2. Khởi chạy App Bing
         log(f"Mở ứng dụng {self.package}...", "action")
         self._adb_shell("monkey", "-p", self.package, "-c", "android.intent.category.LAUNCHER", "1")
-        human_sleep(5.0, 7.0)
+        human_sleep(4.0, 5.5)
+
+        # Đảm bảo chuyển về Trang chủ (Home tab)
+        home_btn_x = int(70 / 720 * self.screen_width)
+        home_btn_y = int(1515 / 1612 * self.screen_height)
+        self._adb_shell("input", "tap", str(home_btn_x), str(home_btn_y))
+        human_sleep(2.0, 3.0)
 
         # 3. Bấm vào nút Rewards ở trang chủ
         log("Bấm nút 'Rewards' trên giao diện chính của Bing...", "action")
         self.tap_relative(*REWARDS_BTN)
-        human_sleep(4.0, 6.0)
+        human_sleep(4.5, 6.0)
 
         # 4. Vuốt màn hình lên để hiển thị thẻ điểm danh
-        log("Vuốt màn hình lên để đưa thẻ điểm danh vào tầm nhìn...", "action")
+        log("Vuốt màn hình lên để đưa thẻ 'Chuỗi liên tiếp' vào tầm nhìn...", "action")
         mid_x = self.screen_width // 2
-        swipe_from_y = int(self.screen_height * 0.75)
-        swipe_to_y = int(self.screen_height * 0.30)
-        self._adb_shell("input", "swipe", str(mid_x), str(swipe_from_y), str(mid_x), str(swipe_to_y), "400")
-        human_sleep(2.5, 4.0)
+        swipe_from_y = int(self.screen_height * 0.74)
+        swipe_to_y = int(self.screen_height * 0.37)
+        self._adb_shell("input", "swipe", str(mid_x), str(swipe_from_y), str(mid_x), str(swipe_to_y), "350")
+        human_sleep(2.5, 3.5)
 
         # 5. Chụp ảnh màn hình trước khi điểm danh
         frame_before_path = os.path.join(WEB_STATIC_DIR, "android_checkin_before.png")
-        log("Chụp ảnh màn hình để phân tích vị trí nút điểm danh...", "action")
+        log("Chụp ảnh màn hình để phân tích trạng thái điểm danh...", "action")
         img_before = None
         for attempt in range(3):
             img_before = self.capture_screenshot(frame_before_path)
@@ -349,10 +639,19 @@ class AndroidBingCheckinBot:
 
         log(f"Đã lưu ảnh kiểm tra: {frame_before_path}", "info")
 
-        # 6. Tìm vị trí ngày hôm nay
-        coords = self.find_today_circle(img_before)
-        if coords is None:
-            log("🎉 Không tìm thấy ngày chưa điểm danh — Hôm nay bạn đã điểm danh rồi!", "success")
+        # 6. Kiểm tra trạng thái điểm danh
+        already_done, coords = self.check_daily_streak_status(img_before)
+        if not already_done and coords is None:
+            # Thử lại bằng thuật toán fallback tìm vòng tròn cũ
+            legacy_coords = self.find_today_circle(img_before)
+            if legacy_coords is not None:
+                coords = legacy_coords
+                already_done = False
+            else:
+                already_done = True
+
+        if already_done:
+            log("🎉 Hôm nay bạn đã điểm danh nhận xu (5 điểm) rồi!", "success")
             return {
                 "success": True,
                 "already_done": True,
@@ -362,12 +661,11 @@ class AndroidBingCheckinBot:
             }
 
         cx, cy = coords
-        log(f"🎯 Phát hiện nút điểm danh hôm nay tại ({cx}, {cy}). Tiến hành bấm...", "action")
-        # Tap có lệch ngẫu nhiên vài pixel như tay người
+        log(f"🎯 Nhận diện nút 'Đăng ký vào' tại ({cx}, {cy}). Tiến hành bấm nhận xu...", "action")
         tap_x = int(cx + random.uniform(-6, 6))
         tap_y = int(cy + random.uniform(-6, 6))
         self._adb_shell("input", "tap", str(tap_x), str(tap_y))
-        human_sleep(3.5, 5.5)
+        human_sleep(3.5, 5.0)
 
         # 7. Chụp ảnh màn hình xác nhận kết quả
         frame_after_path = os.path.join(WEB_STATIC_DIR, "android_checkin_after.png")
@@ -376,11 +674,11 @@ class AndroidBingCheckinBot:
 
         success = True
         if img_after is not None:
-            remaining = self.find_today_circle(img_after)
-            if remaining is None:
-                log("✅ [THÀNH CÔNG] Đã điểm danh thành công trên App Bing! Vòng tròn đã có dấu tick.", "success")
+            done_after, _ = self.check_daily_streak_status(img_after)
+            if done_after:
+                log("✅ [THÀNH CÔNG] Đã điểm danh và nhận xu thành công trên App Bing!", "success")
             else:
-                log("⚠️ Vẫn còn vị trí chưa tick, có thể mạng hơi trễ hoặc cần kiểm tra lại.", "warn")
+                log("⚠️ Đã gửi lệnh bấm nhận xu, đang chờ máy chủ Bing ghi nhận điểm.", "warn")
 
         return {
             "success": success,
@@ -403,9 +701,26 @@ def main():
     parser.add_argument("--package", default="com.microsoft.bing", help="Package name của app Bing")
     parser.add_argument("--pin", default=None, help="Mã PIN mở khóa điện thoại (hoặc qua biến môi trường BING_BOT_PIN)")
     parser.add_argument("--test-screen", action="store_true", help="Chỉ kiểm tra kết nối và chụp ảnh thử")
+    parser.add_argument("--status", action="store_true", help="Kiểm tra trạng thái kết nối & App Bing (JSON)")
+    parser.add_argument("--open-app", action="store_true", help="Mở ứng dụng Microsoft Bing trên điện thoại")
+    parser.add_argument("--close-app", action="store_true", help="Tắt (buộc dừng) ứng dụng Bing trên điện thoại")
     args = parser.parse_args()
 
     bot = AndroidBingCheckinBot(device=args.device, pin=args.pin, package=args.package)
+
+    if args.status:
+        import json
+        st = bot.get_device_status()
+        print(json.dumps(st, ensure_ascii=False, indent=2))
+        sys.exit(0)
+
+    if args.open_app:
+        res = bot.open_app()
+        sys.exit(0 if res.get("success") else 1)
+
+    if args.close_app:
+        res = bot.close_app()
+        sys.exit(0 if res.get("success") else 1)
 
     if args.test_screen:
         bot.ensure_connected()

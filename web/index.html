@@ -212,6 +212,12 @@
           </div>
 
           <div class="checkin-header-actions">
+            <!-- App Bing Status Badge -->
+            <span id="checkinAppBadge" class="checkin-status-badge badge-idle" title="Trạng thái App Bing trên điện thoại">
+              <span class="checkin-pulse-dot"></span>
+              <span id="checkinAppLabel">App: Đang kiểm tra...</span>
+            </span>
+
             <span id="checkinStatusBadge" class="checkin-status-badge badge-idle">
               <span class="checkin-pulse-dot"></span>
               <span id="checkinStatusLabel">Chưa điểm danh</span>
@@ -227,20 +233,28 @@
         </div>
 
         <div class="checkin-horizontal-body">
-          <!-- CỘT 1: THÔNG TIN THIẾT BỊ & ĐỒNG BỘ (Device & Config) -->
+          <!-- CỘT 1: THÔNG TIN THIẾT BỊ & MẠNG TAILSCALE -->
           <div class="checkin-col checkin-col-device">
             <div class="checkin-info-row">
               <span class="info-label">Thiết Bị ADB:</span>
               <div class="device-pill">
-                <span class="checkin-ping-dot"></span>
+                <span id="checkinPingDot" class="checkin-ping-dot"></span>
                 <span id="checkinDevice" class="device-text">100.71.117.39:5555</span>
-                <span class="badge-mini-net">Tailscale</span>
+                <span id="checkinNetBadge" class="badge-mini-net">Tailscale</span>
               </div>
             </div>
 
             <div class="checkin-info-row">
-              <span class="info-label">Ghi Nhận:</span>
-              <span id="checkinLastTime" class="info-val">Chưa thực hiện</span>
+              <span class="info-label">Mạng / ADB:</span>
+              <div class="conn-status-wrap">
+                <span id="checkinConnStatus" class="info-val text-muted">Đang kiểm tra...</span>
+                <button type="button" class="btn-icon-subtle" onclick="reconnectAndroidDevice()" title="Thử kết nối lại ADB">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div class="checkin-info-row">
@@ -253,9 +267,10 @@
             </div>
           </div>
 
-          <!-- CỘT 2: HÀNH ĐỘNG & TRẠNG THÁI (Action & Bot Status) -->
+          <!-- CỘT 2: HÀNH ĐỘNG & ĐIỀU KHIỂN APP BING -->
           <div class="checkin-col checkin-col-action">
             <div class="checkin-btn-wrap">
+              <!-- Nút Điểm Danh Streak Chính -->
               <button id="btnCardRunCheckin" class="btn btn-primary btn-checkin-main" onclick="runAndroidCheckin()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
@@ -263,6 +278,31 @@
                 </svg>
                 <span id="btnCardRunCheckinText">📱 Điểm Danh Ngay</span>
               </button>
+
+              <!-- Nhóm nút Bật / Tắt / Kiểm tra App Bing -->
+              <div class="checkin-app-controls-group">
+                <button id="btnCheckBingApp" class="btn-app-action btn-app-check" onclick="checkBingAppStatus(true)" title="Kiểm tra app Bing đã mở chưa">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <span>Check App</span>
+                </button>
+
+                <button id="btnOpenBingApp" class="btn-app-action btn-app-open" onclick="openBingApp()" title="Mở ứng dụng Microsoft Bing trên điện thoại">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  <span>Mở App</span>
+                </button>
+
+                <button id="btnCloseBingApp" class="btn-app-action btn-app-close" onclick="closeBingApp()" title="Tắt (buộc dừng) ứng dụng Bing trên điện thoại">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  </svg>
+                  <span>Tắt App</span>
+                </button>
+              </div>
             </div>
 
             <!-- Callout trạng thái gọn gàng -->

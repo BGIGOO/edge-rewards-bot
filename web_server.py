@@ -61,6 +61,7 @@ from edge_rewards_bot import (
 from ai_keywords import generate_new_keywords, append_keywords_to_file
 import db
 db.init_db()
+from android_checkin import AndroidBingCheckinBot
 
 
 class BotTaskManager:
@@ -650,16 +651,138 @@ async def run_android_endpoint(request):
 
 
 async def get_android_status_endpoint(request):
-    """Lấy trạng thái và ảnh kết quả điểm danh Android gần nhất"""
+    """Lấy trạng thái thiết bị, app Bing, mạng Tailscale và kết quả điểm danh gần nhất"""
     latest = db.get_latest_android_checkin()
     cfg = load_config()
     android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+    pkg = android_cfg.get("package_name", "com.microsoft.bing")
+
+    loop = asyncio.get_event_loop()
+    def _check():
+        bot = AndroidBingCheckinBot(device=dev, package=pkg)
+        return bot.get_device_status()
+
+    try:
+        dev_status = await asyncio.wait_for(loop.run_in_executor(None, _check), timeout=6.0)
+    except Exception as e:
+        dev_status = {
+            "ping_ok": False,
+            "ping_ms": None,
+            "adb_state": "timeout",
+            "is_connected": False,
+            "app_status": "unreachable",
+            "app_running": False,
+            "app_foreground": False,
+            "message": f"Timeout hoặc lỗi kiểm tra: {e}"
+        }
+
     return JSONResponse({
         "status": "success",
         "config": android_cfg,
         "latest": latest,
+        "device_status": dev_status,
         "is_running": (task_mgr.is_running and task_mgr.current_task_info and task_mgr.current_task_info.get("mode") == "android_checkin")
     })
+
+
+async def open_android_app_endpoint(request):
+    """Mở ứng dụng Microsoft Bing trên điện thoại Android"""
+    if task_mgr.is_running:
+        return JSONResponse({"status": "error", "message": "Bot đang bận thực hiện tác vụ khác!"}, status_code=400)
+
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+    pkg = android_cfg.get("package_name", "com.microsoft.bing")
+    pin = android_cfg.get("pin", "")
+
+    loop = asyncio.get_event_loop()
+    def _run():
+        bot = AndroidBingCheckinBot(device=dev, pin=pin, package=pkg)
+        return bot.open_app()
+
+    try:
+        task_mgr.add_log(f"📱 [ANDROID] Đang gửi lệnh mở App Bing trên điện thoại ({dev})...", "action")
+        res = await asyncio.wait_for(loop.run_in_executor(None, _run), timeout=15.0)
+        if res.get("success"):
+            task_mgr.add_log("✓ [ANDROID] Đã mở App Bing thành công trên điện thoại!", "success")
+            return JSONResponse({"status": "success", **res})
+        else:
+            task_mgr.add_log(f"⚠️ [ANDROID] {res.get('message')}", "warn")
+            return JSONResponse({"status": "error", **res}, status_code=400)
+    except asyncio.TimeoutError:
+        msg = "Timeout khi kết nối thiết bị. Vui lòng kiểm tra điện thoại đã bật 'Gỡ lỗi qua Wi-Fi' chưa!"
+        task_mgr.add_log(f"⚠️ [ANDROID] {msg}", "warn")
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    except Exception as e:
+        err_msg = str(e) or "Lỗi kết nối ADB"
+        task_mgr.add_log(f"❌ [ANDROID] Lỗi khi mở App: {err_msg}", "error")
+        return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
+
+
+async def close_android_app_endpoint(request):
+    """Tắt (buộc dừng) ứng dụng Bing trên điện thoại Android"""
+    if task_mgr.is_running:
+        return JSONResponse({"status": "error", "message": "Bot đang bận thực hiện tác vụ khác!"}, status_code=400)
+
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+    pkg = android_cfg.get("package_name", "com.microsoft.bing")
+
+    loop = asyncio.get_event_loop()
+    def _run():
+        bot = AndroidBingCheckinBot(device=dev, package=pkg)
+        return bot.close_app()
+
+    try:
+        task_mgr.add_log(f"📱 [ANDROID] Đang gửi lệnh đóng/tắt App Bing trên điện thoại ({dev})...", "action")
+        res = await asyncio.wait_for(loop.run_in_executor(None, _run), timeout=15.0)
+        if res.get("success"):
+            task_mgr.add_log("✓ [ANDROID] Đã tắt App Bing hoàn toàn trên điện thoại!", "success")
+            return JSONResponse({"status": "success", **res})
+        else:
+            task_mgr.add_log(f"⚠️ [ANDROID] {res.get('message')}", "warn")
+            return JSONResponse({"status": "error", **res}, status_code=400)
+    except asyncio.TimeoutError:
+        msg = "Timeout khi kết nối thiết bị. Vui lòng kiểm tra điện thoại đã bật 'Gỡ lỗi qua Wi-Fi' chưa!"
+        task_mgr.add_log(f"⚠️ [ANDROID] {msg}", "warn")
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    except Exception as e:
+        err_msg = str(e) or "Lỗi kết nối ADB"
+        task_mgr.add_log(f"❌ [ANDROID] Lỗi khi tắt App: {err_msg}", "error")
+        return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
+
+
+async def reconnect_android_endpoint(request):
+    """Kết nối lại ADB tới điện thoại qua Tailscale"""
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+
+    loop = asyncio.get_event_loop()
+    def _run():
+        bot = AndroidBingCheckinBot(device=dev)
+        return bot.reconnect_device()
+
+    try:
+        task_mgr.add_log(f"📱 [ANDROID] Đang thử kết nối lại tới thiết bị {dev} qua Tailscale...", "action")
+        res = await asyncio.wait_for(loop.run_in_executor(None, _run), timeout=15.0)
+        if res.get("success"):
+            task_mgr.add_log(f"✓ [ANDROID] {res.get('message')}", "success")
+            return JSONResponse({"status": "success", **res})
+        else:
+            task_mgr.add_log(f"⚠️ [ANDROID] {res.get('message')}", "warn")
+            return JSONResponse({"status": "error", **res}, status_code=400)
+    except asyncio.TimeoutError:
+        msg = "Timeout khi kết nối ADB qua Tailscale. Hãy đảm bảo điện thoại đang bật 'Gỡ lỗi qua Wi-Fi'!"
+        task_mgr.add_log(f"⚠️ [ANDROID] {msg}", "warn")
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    except Exception as e:
+        err_msg = str(e) or "Lỗi kết nối ADB"
+        task_mgr.add_log(f"❌ [ANDROID] Lỗi kết nối: {err_msg}", "error")
+        return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
 
 
 async def get_keywords_endpoint(request):
@@ -846,6 +969,9 @@ routes = [
     Route("/api/history", get_history_endpoint, methods=["GET"]),
     Route("/api/android/checkin", run_android_endpoint, methods=["POST"]),
     Route("/api/android/status", get_android_status_endpoint, methods=["GET"]),
+    Route("/api/android/app/open", open_android_app_endpoint, methods=["POST"]),
+    Route("/api/android/app/close", close_android_app_endpoint, methods=["POST"]),
+    Route("/api/android/connect", reconnect_android_endpoint, methods=["POST"]),
     Route("/api/metadata", get_metadata_endpoint, methods=["GET"]),
     WebSocketRoute("/ws/logs", websocket_logs),
 ]

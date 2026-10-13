@@ -50,6 +50,16 @@ const btnCardRunCheckin = document.getElementById("btnCardRunCheckin");
 const btnCardRunCheckinText = document.getElementById("btnCardRunCheckinText");
 const btnCardPreviewFrame = document.getElementById("btnCardPreviewFrame");
 
+// New Android & Tailscale Component Elements
+const checkinAppBadge = document.getElementById("checkinAppBadge");
+const checkinAppLabel = document.getElementById("checkinAppLabel");
+const checkinPingDot = document.getElementById("checkinPingDot");
+const checkinNetBadge = document.getElementById("checkinNetBadge");
+const checkinConnStatus = document.getElementById("checkinConnStatus");
+const btnCheckBingApp = document.getElementById("btnCheckBingApp");
+const btnOpenBingApp = document.getElementById("btnOpenBingApp");
+const btnCloseBingApp = document.getElementById("btnCloseBingApp");
+
 const metaModeBadge = document.getElementById("metaModeBadge");
 const metaIpAddress = document.getElementById("metaIpAddress");
 const metaDelay = document.getElementById("metaDelay");
@@ -1211,6 +1221,7 @@ async function loadAndroidStatus() {
     const data = await res.json();
     const latest = data.latest || {};
     const config = data.config || {};
+    const devStatus = data.device_status || {};
     const status = latest.status || "pending";
     const isRunning = Boolean(data.is_running);
 
@@ -1219,7 +1230,7 @@ async function loadAndroidStatus() {
       checkinDevice.innerText = config.device_address || latest.device || "100.71.117.39:5555";
     }
     if (checkinLastTime) {
-      checkinLastTime.innerText = latest.created_at || "Hôm nay (Chưa có log)";
+      checkinLastTime.innerText = latest.created_at || "Chưa có log điểm danh";
     }
     const isAuto = config.auto_checkin_after_search !== false;
     if (checkinAutoToggle) {
@@ -1230,73 +1241,112 @@ async function loadAndroidStatus() {
       checkinAutoStatus.className = `switch-label-text ${isAuto ? "status-pill-active" : ""}`;
     }
 
-    // 2. Cập nhật Status Badge, Callout & Nút bấm
+    // 2. Cập nhật trạng thái Mạng Tailscale & Cổng ADB
+    const pingOk = Boolean(devStatus.ping_ok);
+    const pingMs = devStatus.ping_ms;
+    const adbState = devStatus.adb_state || "disconnected";
+
+    if (checkinPingDot) {
+      checkinPingDot.style.background = pingOk ? "#10B981" : "#EF4444";
+      checkinPingDot.title = pingOk ? `Đã thông mạng Tailscale (${pingMs}ms)` : "Mất mạng Tailscale";
+    }
+    if (checkinNetBadge) {
+      if (pingOk) {
+        checkinNetBadge.innerText = `Tailscale (${pingMs}ms)`;
+        checkinNetBadge.style.color = "#047857";
+        checkinNetBadge.style.background = "#DCFCE7";
+      } else {
+        checkinNetBadge.innerText = "Mất Tailscale";
+        checkinNetBadge.style.color = "#DC2626";
+        checkinNetBadge.style.background = "#FEE2E2";
+      }
+    }
+    if (checkinConnStatus) {
+      if (!pingOk) {
+        checkinConnStatus.innerHTML = '<span style="color:#DC2626; font-weight:600;">✗ Chưa bật VPN</span>';
+      } else if (adbState === "device") {
+        checkinConnStatus.innerHTML = '<span style="color:#10B981; font-weight:600;">✓ Sẵn sàng ADB</span>';
+      } else if (adbState === "offline") {
+        checkinConnStatus.innerHTML = '<span style="color:#D97706; font-weight:600;">! ADB Offline</span>';
+      } else {
+        checkinConnStatus.innerHTML = '<span style="color:#DC2626; font-weight:600;">✗ Cổng 5555 đóng</span>';
+      }
+    }
+
+    // 3. Cập nhật trạng thái App Bing Badge
+    const appState = devStatus.app_status || "unknown";
+    if (checkinAppBadge && checkinAppLabel) {
+      checkinAppBadge.className = "checkin-status-badge";
+      if (appState === "foreground") {
+        checkinAppBadge.classList.add("badge-app-fg");
+        checkinAppLabel.innerText = "🟢 App: Đang mở";
+      } else if (appState === "background") {
+        checkinAppBadge.classList.add("badge-app-bg");
+        checkinAppLabel.innerText = "🟡 App: Chạy ngầm";
+      } else if (appState === "closed") {
+        checkinAppBadge.classList.add("badge-app-closed");
+        checkinAppLabel.innerText = "⚪ App: Đã tắt";
+      } else {
+        checkinAppBadge.classList.add("badge-app-unreachable");
+        checkinAppLabel.innerText = "🔴 App: Mất kết nối";
+      }
+    }
+
+    // 4. Cập nhật Status Badge, Callout & Nút bấm
     if (isRunning) {
       if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-running";
       if (checkinStatusLabel) checkinStatusLabel.innerText = "⏳ Đang điểm danh...";
       if (checkinCallout) checkinCallout.className = "checkin-callout callout-running";
       if (checkinMessageText) checkinMessageText.innerText = "Tiến trình bot đang điều khiển App Bing trên điện thoại Android...";
-      
+
       if (btnCardRunCheckin) btnCardRunCheckin.disabled = true;
       if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "⏳ Đang chạy...";
       if (btnRunAndroidCheckin) {
         btnRunAndroidCheckin.disabled = true;
         btnRunAndroidCheckin.innerHTML = `<span>⏳ Đang chạy...</span>`;
       }
-    } else if (status === "completed") {
-      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-success";
-      if (checkinStatusLabel) checkinStatusLabel.innerText = "✓ Đã điểm danh hôm nay";
-      if (checkinCallout) checkinCallout.className = "checkin-callout callout-success";
-      if (checkinMessageText) checkinMessageText.innerText = latest.message || "Điểm danh thành công! Đã tích lũy điểm thưởng streak hôm nay.";
-
-      if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
-      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "🔄 Điểm Danh Lại";
-      if (btnRunAndroidCheckin) {
-        btnRunAndroidCheckin.disabled = false;
-        btnRunAndroidCheckin.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-          </svg>
-          <span>📱 Điểm Danh App Bing</span>`;
-      }
-    } else if (status === "failed" || status === "error") {
-      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-error";
-      if (checkinStatusLabel) checkinStatusLabel.innerText = "! Lỗi / Chưa xong";
-      if (checkinCallout) checkinCallout.className = "checkin-callout callout-error";
-      if (checkinMessageText) checkinMessageText.innerText = latest.message || "Lần chạy gần nhất kết thúc với lỗi hoặc không tìm thấy nút Rewards.";
-
-      if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
-      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "⚡ Thử Lại Ngay";
-      if (btnRunAndroidCheckin) {
-        btnRunAndroidCheckin.disabled = false;
-        btnRunAndroidCheckin.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-          </svg>
-          <span>📱 Điểm Danh App Bing</span>`;
-      }
+      if (btnOpenBingApp) btnOpenBingApp.disabled = true;
+      if (btnCloseBingApp) btnCloseBingApp.disabled = true;
+      if (btnCheckBingApp) btnCheckBingApp.disabled = true;
     } else {
-      if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-idle";
-      if (checkinStatusLabel) checkinStatusLabel.innerText = "Chưa điểm danh";
-      if (checkinCallout) checkinCallout.className = "checkin-callout callout-idle";
-      if (checkinMessageText) checkinMessageText.innerText = latest.message || "Sẵn sàng điểm danh tích điểm streak trên ứng dụng Microsoft Bing.";
+      if (btnOpenBingApp) btnOpenBingApp.disabled = false;
+      if (btnCloseBingApp) btnCloseBingApp.disabled = false;
+      if (btnCheckBingApp) btnCheckBingApp.disabled = false;
 
-      if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
-      if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "📱 Điểm Danh Ngay";
-      if (btnRunAndroidCheckin) {
-        btnRunAndroidCheckin.disabled = false;
-        btnRunAndroidCheckin.innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-          </svg>
-          <span>📱 Điểm Danh App Bing</span>`;
+      if (status === "completed") {
+        if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-success";
+        if (checkinStatusLabel) checkinStatusLabel.innerText = "✓ Đã điểm danh hôm nay";
+        if (checkinCallout) checkinCallout.className = "checkin-callout callout-success";
+        if (checkinMessageText) {
+          checkinMessageText.innerText = (devStatus.message ? `${devStatus.message} • ` : "") + (latest.message || "Điểm danh hoàn tất thành công!");
+        }
+
+        if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
+        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "🔄 Điểm Danh Lại";
+      } else if (status === "failed" || status === "error") {
+        if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-error";
+        if (checkinStatusLabel) checkinStatusLabel.innerText = "! Lỗi / Chưa xong";
+        if (checkinCallout) checkinCallout.className = "checkin-callout callout-error";
+        if (checkinMessageText) {
+          checkinMessageText.innerText = devStatus.message || latest.message || "Lần chạy gần nhất kết thúc với lỗi hoặc không tìm thấy nút Rewards.";
+        }
+
+        if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
+        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "⚡ Thử Lại Ngay";
+      } else {
+        if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-idle";
+        if (checkinStatusLabel) checkinStatusLabel.innerText = "Chưa điểm danh";
+        if (checkinCallout) checkinCallout.className = "checkin-callout callout-idle";
+        if (checkinMessageText) {
+          checkinMessageText.innerText = devStatus.message || "Sẵn sàng điểm danh tích điểm streak trên ứng dụng Microsoft Bing.";
+        }
+
+        if (btnCardRunCheckin) btnCardRunCheckin.disabled = false;
+        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "📱 Điểm Danh Ngay";
       }
     }
 
-    // 3. Cập nhật ảnh chụp màn hình đối soát (Thumbnails)
+    // 5. Cập nhật ảnh chụp màn hình đối soát (Thumbnails)
     const hasFrames = Boolean(latest.frame_before || latest.frame_after);
     const t = Date.now();
     if (checkinThumbStrip && checkinNoThumb) {
@@ -1321,6 +1371,115 @@ async function loadAndroidStatus() {
     }
   } catch (e) {
     console.error("Lỗi lấy trạng thái Android:", e);
+  }
+}
+
+async function checkBingAppStatus(showAlert = false) {
+  if (btnCheckBingApp) {
+    btnCheckBingApp.disabled = true;
+    btnCheckBingApp.innerHTML = `<span>⏳ Đang check...</span>`;
+  }
+  try {
+    await loadAndroidStatus();
+    if (showAlert) {
+      const res = await fetch("/api/android/status");
+      if (res.ok) {
+        const data = await res.json();
+        const ds = data.device_status || {};
+        let info = `[KẾT QUẢ KIỂM TRA ĐIỆN THOẠI]\n\n`;
+        info += `• Mạng Tailscale: ${ds.ping_ok ? `Đã kết nối (${ds.ping_ms}ms)` : "Mất kết nối"}\n`;
+        info += `• Cổng ADB: ${ds.adb_state}\n`;
+        info += `• Trạng thái App Bing: ${String(ds.app_status || "unknown").toUpperCase()} (${ds.message || ""})\n`;
+        if (ds.screen_unlocked !== null && ds.screen_unlocked !== undefined) {
+          info += `• Màn hình: ${ds.screen_unlocked ? "Đã mở khóa" : "Đang khóa"}\n`;
+        }
+        alert(info);
+      }
+    }
+  } catch (e) {
+    if (showAlert) alert(`Lỗi kiểm tra: ${e.message}`);
+  } finally {
+    if (btnCheckBingApp) {
+      btnCheckBingApp.disabled = false;
+      btnCheckBingApp.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Check App</span>`;
+    }
+  }
+}
+
+async function openBingApp() {
+  if (btnOpenBingApp) {
+    btnOpenBingApp.disabled = true;
+    btnOpenBingApp.innerHTML = `<span>⏳ Đang mở...</span>`;
+  }
+  try {
+    const res = await fetch("/api/android/app/open", { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.status === "success") {
+      alert(`[Thành công] ${data.message || "Đã mở App Bing trên điện thoại!"}`);
+    } else {
+      alert(`[Thông báo] ${data.message || "Không thể mở App Bing"}`);
+    }
+    await loadAndroidStatus();
+  } catch (e) {
+    alert(`Lỗi khi mở App: ${e.message}`);
+  } finally {
+    if (btnOpenBingApp) {
+      btnOpenBingApp.disabled = false;
+      btnOpenBingApp.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Mở App</span>`;
+    }
+  }
+}
+
+async function closeBingApp() {
+  if (btnCloseBingApp) {
+    btnCloseBingApp.disabled = true;
+    btnCloseBingApp.innerHTML = `<span>⏳ Đang tắt...</span>`;
+  }
+  try {
+    const res = await fetch("/api/android/app/close", { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.status === "success") {
+      alert(`[Thành công] ${data.message || "Đã tắt App Bing trên điện thoại!"}`);
+    } else {
+      alert(`[Thông báo] ${data.message || "Không thể tắt App Bing"}`);
+    }
+    await loadAndroidStatus();
+  } catch (e) {
+    alert(`Lỗi khi tắt App: ${e.message}`);
+  } finally {
+    if (btnCloseBingApp) {
+      btnCloseBingApp.disabled = false;
+      btnCloseBingApp.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        </svg>
+        <span>Tắt App</span>`;
+    }
+  }
+}
+
+async function reconnectAndroidDevice() {
+  try {
+    if (checkinConnStatus) checkinConnStatus.innerText = "Đang kết nối lại...";
+    const res = await fetch("/api/android/connect", { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.status === "success") {
+      alert(`[Kết nối] ${data.message}`);
+    } else {
+      alert(`[Lỗi kết nối] ${data.message || "Không thể kết nối lại thiết bị"}`);
+    }
+    await loadAndroidStatus();
+  } catch (e) {
+    alert(`Lỗi kết nối: ${e.message}`);
   }
 }
 

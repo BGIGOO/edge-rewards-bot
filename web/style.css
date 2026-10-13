@@ -1651,6 +1651,30 @@ body {
   border: 1px solid #FECACA;
 }
 
+.checkin-status-badge.badge-app-fg {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.checkin-status-badge.badge-app-bg {
+  background: #FFFBEB;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+
+.checkin-status-badge.badge-app-closed {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.checkin-status-badge.badge-app-unreachable {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
 .checkin-pulse-dot {
   width: 6px;
   height: 6px;
@@ -1866,6 +1890,91 @@ body {
   opacity: 0.65;
   cursor: not-allowed;
   transform: none;
+}
+
+.checkin-app-controls-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.btn-app-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-app-action.btn-app-check {
+  background: #FFFFFF;
+  color: #334155;
+  border-color: #CBD5E1;
+}
+.btn-app-action.btn-app-check:hover:not(:disabled) {
+  background: #F8FAFC;
+  color: #0F172A;
+  border-color: #94A3B8;
+  transform: translateY(-1px);
+}
+
+.btn-app-action.btn-app-open {
+  background: #10B981;
+  color: #FFFFFF;
+}
+.btn-app-action.btn-app-open:hover:not(:disabled) {
+  background: #059669;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-app-action.btn-app-close {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+.btn-app-action.btn-app-close:hover:not(:disabled) {
+  background: #DC2626;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-app-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.conn-status-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-icon-subtle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--text-muted);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.btn-icon-subtle:hover {
+  color: var(--primary);
+  background: #E2E8F0;
 }
 
 .checkin-callout-compact {
