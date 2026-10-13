@@ -38,6 +38,7 @@ const checkinStatusLabel = document.getElementById("checkinStatusLabel");
 const checkinDevice = document.getElementById("checkinDevice");
 const checkinLastTime = document.getElementById("checkinLastTime");
 const checkinAutoStatus = document.getElementById("checkinAutoStatus");
+const checkinAutoToggle = document.getElementById("checkinAutoToggle");
 const checkinCallout = document.getElementById("checkinCallout");
 const checkinMessageText = document.getElementById("checkinMessageText");
 const calloutIcon = document.getElementById("calloutIcon");
@@ -1220,10 +1221,13 @@ async function loadAndroidStatus() {
     if (checkinLastTime) {
       checkinLastTime.innerText = latest.created_at || "Hôm nay (Chưa có log)";
     }
+    const isAuto = config.auto_checkin_after_search !== false;
+    if (checkinAutoToggle) {
+      checkinAutoToggle.checked = isAuto;
+    }
     if (checkinAutoStatus) {
-      const isAuto = config.auto_checkin_after_search !== false;
       checkinAutoStatus.innerText = isAuto ? "Bật sau Search" : "Chạy thủ công";
-      checkinAutoStatus.className = `checkin-meta-val ${isAuto ? "status-pill-active" : ""}`;
+      checkinAutoStatus.className = `switch-label-text ${isAuto ? "status-pill-active" : ""}`;
     }
 
     // 2. Cập nhật Status Badge, Callout & Nút bấm
@@ -1317,6 +1321,30 @@ async function loadAndroidStatus() {
     }
   } catch (e) {
     console.error("Lỗi lấy trạng thái Android:", e);
+  }
+}
+
+async function toggleAutoCheckin(enabled) {
+  try {
+    const res = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        android_settings: {
+          auto_checkin_after_search: enabled
+        }
+      })
+    });
+    if (res.ok) {
+      if (checkinAutoStatus) {
+        checkinAutoStatus.innerText = enabled ? "Bật sau Search" : "Chạy thủ công";
+        checkinAutoStatus.className = `switch-label-text ${enabled ? "status-pill-active" : ""}`;
+      }
+      const cfgAndroidAutoRun = document.getElementById("cfgAndroidAutoRun");
+      if (cfgAndroidAutoRun) cfgAndroidAutoRun.checked = enabled;
+    }
+  } catch (e) {
+    console.error("Lỗi cập nhật cấu hình tự động điểm danh:", e);
   }
 }
 

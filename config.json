@@ -1,6 +1,6 @@
 {
   "search_settings": {
-    "pc_searches": 21,
+    "pc_searches": 31,
     "mobile_searches": 21,
     "min_delay_seconds": 12,
     "max_delay_seconds": 22,
@@ -23,7 +23,7 @@
     "device_address": "100.71.117.39:5555",
     "package_name": "com.microsoft.bing",
     "pin": "quynh1981",
-    "auto_checkin_after_search": true
+    "auto_checkin_after_search": false
   },
   "profiles": [
     {

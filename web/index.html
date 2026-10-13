@@ -116,177 +116,50 @@
       </div>
     </section>
 
-    <!-- Live Operations Hub: Điểm Danh App Bing & Metadata Inspector -->
+    <!-- Live Operations Hub: Metadata Inspector & Điểm Danh App Bing -->
     <section class="inspector-section">
-      <div class="inspector-grid">
 
-        <!-- COMPONENT 1: ĐIỂM DANH APP BING (Android Mobile Check-in Hub) -->
-        <div class="checkin-card">
-          <div class="checkin-card-header">
-            <div class="checkin-title-group">
-              <div class="checkin-icon-badge">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
-                  <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3" stroke-linecap="round"></line>
-                  <path d="M9 6h6" stroke-linecap="round"></path>
-                </svg>
-              </div>
-              <div class="checkin-title-text">
-                <h3 class="checkin-title">Điểm Danh App Bing</h3>
-                <span class="checkin-subtitle">Android Mobile • Kết nối qua ADB Tailscale</span>
-              </div>
-            </div>
-
-            <div class="checkin-header-badge-wrap">
-              <span id="checkinStatusBadge" class="checkin-status-badge badge-idle">
-                <span class="checkin-pulse-dot"></span>
-                <span id="checkinStatusLabel">Chưa điểm danh</span>
-              </span>
-            </div>
+      <!-- CARD 1: LIVE METADATA & HEADERS INSPECTOR -->
+      <div class="metadata-card">
+        <div class="metadata-card-header">
+          <div class="meta-title-group">
+            <span class="pulse-live-dot"></span>
+            <h3 class="meta-title">Metadata & Session Inspector</h3>
           </div>
-
-          <div class="checkin-card-body">
-            <!-- Grid thông số nhanh: Thiết bị, Lượt ghi nhận, Chế độ tự động -->
-            <div class="checkin-meta-row">
-              <div class="checkin-meta-item">
-                <span class="checkin-meta-label">Thiết Bị ADB</span>
-                <div class="checkin-meta-val-wrap">
-                  <span class="checkin-ping-dot"></span>
-                  <span id="checkinDevice" class="checkin-meta-val">100.71.117.39:5555</span>
-                </div>
-              </div>
-
-              <div class="checkin-meta-item">
-                <span class="checkin-meta-label">Ghi Nhận Gần Nhất</span>
-                <span id="checkinLastTime" class="checkin-meta-val">Chưa thực hiện</span>
-              </div>
-
-              <div class="checkin-meta-item">
-                <span class="checkin-meta-label">Chế Độ Tự Động</span>
-                <span id="checkinAutoStatus" class="checkin-meta-val status-pill-active">Bật sau Search</span>
-              </div>
-            </div>
-
-            <!-- Callout trạng thái / Thông điệp phản hồi từ bot -->
-            <div id="checkinCallout" class="checkin-callout callout-idle">
-              <div class="callout-icon-wrap">
-                <svg id="calloutIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-              </div>
-              <div class="callout-content">
-                <span class="callout-title">Trạng Thái Thực Thi</span>
-                <p id="checkinMessageText" class="callout-desc">Sẵn sàng điểm danh tích điểm streak trên ứng dụng Microsoft Bing.</p>
-              </div>
-            </div>
-
-            <!-- Khung Ảnh Đối Soát Thực Tế (Visual ADB Screenshots) -->
-            <div class="checkin-preview-section">
-              <div class="preview-section-header">
-                <div class="preview-header-left">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #38BDF8;">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                  </svg>
-                  <span class="preview-title">Ảnh Chụp Đối Soát Màn Hình (ADB Frame)</span>
-                </div>
-                <button type="button" class="btn-xs-link" onclick="openFrameModal()">
-                  <span>🔍 Phóng to</span>
-                </button>
-              </div>
-
-              <div id="checkinThumbStrip" class="checkin-thumbs-grid">
-                <div class="thumb-card" onclick="openFrameModal()" title="Bấm để xem ảnh phóng to">
-                  <span class="thumb-label">1. Trước Điểm Danh</span>
-                  <div class="thumb-img-wrap">
-                    <img id="checkinThumbBefore" src="/static/android_checkin_before.png" alt="Trước điểm danh" onerror="this.src='/static/android_checkin_before.png'">
-                    <span class="thumb-zoom-badge">🔍 Xem ảnh</span>
-                  </div>
-                </div>
-
-                <div class="thumb-card" onclick="openFrameModal()" title="Bấm để xem ảnh phóng to">
-                  <span class="thumb-label">2. Sau Khi Điểm Danh</span>
-                  <div class="thumb-img-wrap">
-                    <img id="checkinThumbAfter" src="/static/android_checkin_after.png" alt="Sau khi điểm danh" onerror="this.src='/static/android_checkin_before.png'">
-                    <span class="thumb-zoom-badge">✓ Hoàn tất</span>
-                  </div>
-                </div>
-              </div>
-
-              <div id="checkinNoThumb" class="checkin-no-thumb hidden">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                  <circle cx="12" cy="13" r="4"></circle>
-                </svg>
-                <span>Chưa có ảnh chụp đối soát gần nhất. Bấm "Điểm Danh Ngay" để khởi chạy.</span>
-              </div>
-            </div>
-
-            <!-- Thanh Hành Động (Action Toolbar) -->
-            <div class="checkin-actions-row">
-              <button id="btnCardRunCheckin" class="btn btn-primary btn-checkin-main" onclick="runAndroidCheckin()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
-                  <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5"></line>
-                </svg>
-                <span id="btnCardRunCheckinText">📱 Điểm Danh Ngay</span>
-              </button>
-
-              <button id="btnCardPreviewFrame" class="btn btn-secondary" onclick="openFrameModal()" title="Xem chi tiết ảnh màn hình đối soát đầy đủ">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                  <circle cx="12" cy="13" r="4"></circle>
-                </svg>
-                <span>Màn Hình Đối Soát</span>
-              </button>
-
-              <button class="btn btn-ghost" onclick="openSettingsModal()" title="Mở cài đặt thiết bị Tailscale và PIN ADB">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-                <span>Cài Đặt</span>
-              </button>
-            </div>
+          <div class="meta-badge-group">
+            <span id="metaModeBadge" class="meta-chip chip-idle">Idle (Đang chờ)</span>
           </div>
         </div>
 
-        <!-- CARD 2: LIVE METADATA & HEADERS INSPECTOR -->
-        <div class="metadata-card">
-          <div class="metadata-card-header">
-            <div class="meta-title-group">
-              <span class="pulse-live-dot"></span>
-              <h3 class="meta-title">Metadata & Session Inspector</h3>
+        <div class="metadata-card-body">
+          <!-- Row 1: Metrics -->
+          <div class="meta-metric-row">
+            <div class="meta-item">
+              <span class="meta-label">IP Hiện Tại (Public IP)</span>
+              <div class="meta-value-wrap">
+                <span class="meta-flag">🇻🇳</span>
+                <span id="metaIpAddress" class="meta-val highlight-ip">1.52.0.121</span>
+                <span class="meta-subtag">Direct</span>
+              </div>
             </div>
-            <div class="meta-badge-group">
-              <span id="metaModeBadge" class="meta-chip chip-idle">Idle (Đang chờ)</span>
+            <div class="meta-item">
+              <span class="meta-label">Độ Trễ Giả Lập</span>
+              <span id="metaDelay" class="meta-val">12s - 22s / lượt</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Màn Hình (Viewport)</span>
+              <span id="metaViewport" class="meta-val">1920 × 1080</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Anti-Detect Engine</span>
+              <div class="meta-value-wrap">
+                <span class="meta-val text-success" style="font-size: 12px;">Active (Bypassed)</span>
+              </div>
             </div>
           </div>
 
-          <div class="metadata-card-body">
-            <!-- IP & Location Row -->
-            <div class="meta-metric-row">
-              <div class="meta-item">
-                <span class="meta-label">IP Hiện Tại (Public IP)</span>
-                <div class="meta-value-wrap">
-                  <span class="meta-flag">🇻🇳</span>
-                  <span id="metaIpAddress" class="meta-val highlight-ip">1.52.0.121</span>
-                  <span class="meta-subtag">Direct</span>
-                </div>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Độ Trễ Giả Lập</span>
-                <span id="metaDelay" class="meta-val">12s - 22s / lượt</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Màn Hình (Viewport)</span>
-                <span id="metaViewport" class="meta-val">1920 × 1080</span>
-              </div>
-            </div>
-
-            <!-- Headers & User-Agent Block -->
+          <!-- Row 2: Headers & Client Hints -->
+          <div class="meta-lower-grid">
             <div class="meta-block">
               <div class="meta-block-header">
                 <span class="meta-block-title">User-Agent Header</span>
@@ -299,12 +172,10 @@
                 </button>
               </div>
               <div id="metaUserAgent" class="meta-code-box">
-                Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0
-                Safari/537.36 Edg/131.0.0.0
+                Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0
               </div>
             </div>
 
-            <!-- Client Hints (Sec-Ch-Ua) -->
             <div class="meta-hints-grid">
               <div class="hint-item">
                 <span class="hint-key">sec-ch-ua-platform:</span>
@@ -315,18 +186,125 @@
                 <span id="hintMobile" class="hint-val">?0</span>
               </div>
               <div class="hint-item">
-                <span class="hint-key">Anti-Detect:</span>
-                <span class="hint-val text-success">Active (Bypassed)</span>
-              </div>
-              <div class="hint-item">
                 <span class="hint-key">Target Engine:</span>
                 <span class="hint-val">https://www.bing.com</span>
               </div>
             </div>
           </div>
         </div>
-
       </div>
+
+      <!-- CARD 2: COMPONENT ĐIỂM DANH APP BING (Horizontal Multi-Column Card) -->
+      <div class="checkin-card-horizontal">
+        <div class="checkin-card-header">
+          <div class="checkin-title-group">
+            <div class="checkin-icon-badge">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3" stroke-linecap="round"></line>
+                <path d="M9 6h6" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <div class="checkin-title-text">
+              <h3 class="checkin-title">Điểm Danh App Bing (Android)</h3>
+              <span class="checkin-subtitle">Tự động nhận streak hàng ngày qua ADB Tailscale</span>
+            </div>
+          </div>
+
+          <div class="checkin-header-actions">
+            <span id="checkinStatusBadge" class="checkin-status-badge badge-idle">
+              <span class="checkin-pulse-dot"></span>
+              <span id="checkinStatusLabel">Chưa điểm danh</span>
+            </span>
+            <button class="btn btn-xs btn-ghost" onclick="openSettingsModal()" title="Cài đặt ADB / Mật khẩu PIN">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>Cài Đặt</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="checkin-horizontal-body">
+          <!-- CỘT 1: THÔNG TIN THIẾT BỊ & ĐỒNG BỘ (Device & Config) -->
+          <div class="checkin-col checkin-col-device">
+            <div class="checkin-info-row">
+              <span class="info-label">Thiết Bị ADB:</span>
+              <div class="device-pill">
+                <span class="checkin-ping-dot"></span>
+                <span id="checkinDevice" class="device-text">100.71.117.39:5555</span>
+                <span class="badge-mini-net">Tailscale</span>
+              </div>
+            </div>
+
+            <div class="checkin-info-row">
+              <span class="info-label">Ghi Nhận:</span>
+              <span id="checkinLastTime" class="info-val">Chưa thực hiện</span>
+            </div>
+
+            <div class="checkin-info-row">
+              <span class="info-label">Tự Động:</span>
+              <label class="switch-auto-checkin" title="Tự động điểm danh sau khi bot chạy xong tìm kiếm PC & Mobile">
+                <input type="checkbox" id="checkinAutoToggle" checked onchange="toggleAutoCheckin(this.checked)">
+                <span class="slider-auto"></span>
+                <span id="checkinAutoStatus" class="switch-label-text">Bật sau Search</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- CỘT 2: HÀNH ĐỘNG & TRẠNG THÁI (Action & Bot Status) -->
+          <div class="checkin-col checkin-col-action">
+            <div class="checkin-btn-wrap">
+              <button id="btnCardRunCheckin" class="btn btn-primary btn-checkin-main" onclick="runAndroidCheckin()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5"></line>
+                </svg>
+                <span id="btnCardRunCheckinText">📱 Điểm Danh Ngay</span>
+              </button>
+            </div>
+
+            <!-- Callout trạng thái gọn gàng -->
+            <div id="checkinCallout" class="checkin-callout-compact callout-idle">
+              <div class="callout-icon-wrap">
+                <svg id="calloutIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <p id="checkinMessageText" class="callout-desc">Sẵn sàng điểm danh tích điểm streak trên App Bing.</p>
+            </div>
+          </div>
+
+          <!-- CỘT 3: ẢNH ĐỐI SOÁT ADB - THU NHỎ (Compact Thumbnails 110x70px) -->
+          <div class="checkin-col checkin-col-preview">
+            <div class="preview-mini-header">
+              <span class="preview-mini-title">Đối Soát Màn Hình (ADB)</span>
+              <button type="button" class="btn-xs-link" onclick="openFrameModal()" title="Xem ảnh chụp kích thước đầy đủ">
+                <span>🔍 Phóng to</span>
+              </button>
+            </div>
+
+            <div id="checkinThumbStrip" class="checkin-mini-thumbs">
+              <div class="mini-thumb-card" onclick="openFrameModal()" title="Bấm để xem ảnh phóng to Trước khi điểm danh">
+                <img id="checkinThumbBefore" src="/static/android_checkin_before.png" alt="Trước" onerror="this.src='/static/android_checkin_before.png'">
+                <span class="mini-thumb-tag">1. Trước</span>
+              </div>
+              <div class="mini-thumb-card" onclick="openFrameModal()" title="Bấm để xem ảnh phóng to Sau khi điểm danh">
+                <img id="checkinThumbAfter" src="/static/android_checkin_after.png" alt="Sau" onerror="this.src='/static/android_checkin_before.png'">
+                <span class="mini-thumb-tag tag-success">2. Sau (✓)</span>
+              </div>
+            </div>
+
+            <div id="checkinNoThumb" class="checkin-mini-no-thumb hidden" onclick="openFrameModal()">
+              <span>Chưa có ảnh chụp đối soát</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <!-- Profiles List Section (Dạng Danh Sách Tối Giản, Gọn Gàng) -->
