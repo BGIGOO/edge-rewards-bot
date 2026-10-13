@@ -15,6 +15,7 @@ import subprocess
 import argparse
 import re
 import shutil
+import json
 from datetime import datetime
 
 # Đảm bảo console Windows hỗ trợ UTF-8
@@ -69,6 +70,19 @@ def find_adb_path():
 
 ADB_PATH = find_adb_path()
 DEFAULT_DEVICE = "100.71.117.39:5555"
+
+def load_default_pin():
+    """Đọc mã PIN từ config.json nếu có, mặc định 'quynh1981'"""
+    config_path = os.path.join(SCRIPT_DIR, "config.json")
+    pin = "quynh1981"
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                pin = cfg.get("android_settings", {}).get("pin", pin)
+    except Exception:
+        pass
+    return pin
 
 # Tọa độ tương đối đo trên màn hình 720x1612 (tỷ lệ theo chiều rộng/cao)
 # Nút Rewards ở trang chủ Bing
@@ -135,7 +149,7 @@ class AndroidBingCheckinBot:
         self.device = device
         self.host = device.split(":")[0] if ":" in device else device
         self.port = device.split(":")[1] if ":" in device else "5555"
-        self.pin = pin or os.environ.get("BING_BOT_PIN")
+        self.pin = pin or os.environ.get("BING_BOT_PIN") or load_default_pin()
         self.package = package
         self.adb = find_adb_path()
         self.screen_width = 720
@@ -336,26 +350,28 @@ class AndroidBingCheckinBot:
         self.screen_height = 1612
 
     def is_screen_awake(self):
-        """Kiểm tra màn hình đang SÁNG (Awake) hay TẮT (Asleep)"""
+        """Kiểm tra màn hình đang SÁNG hay TẮT qua PowerManager Service (Áp dụng từ test_wake_and_capture.py)"""
         try:
-            out = self._run_adb_raw("shell", "dumpsys", "power", timeout=5).stdout
-            for line in out.splitlines():
-                if "mWakefulness=" in line:
-                    return "mWakefulness=Awake" in line
+            out = self._run_adb_raw("shell", "dumpsys power | grep mWakefulness=", timeout=8).stdout
+            return "mWakefulness=Awake" in out
         except Exception:
             pass
         return True
 
     def is_device_locked(self):
-        """Kiểm tra điện thoại có đang bị khóa (Keyguard / Lockscreen) không"""
+        """
+        Kiểm tra điện thoại ĐANG KHÓA (Lockscreen) hay ĐÃ MỞ KHÓA (Áp dụng từ test_wake_and_capture.py):
+        - isKeyguardShowing=true / showing=true: Đang khóa
+        - deviceLocked=1: Đang khóa
+        """
         try:
-            out_win = self._run_adb_raw("shell", "dumpsys window | grep -E 'isKeyguardShowing|showing='", timeout=5).stdout
+            out_win = self._run_adb_raw("shell", "dumpsys window | grep -E 'isKeyguardShowing|showing='", timeout=8).stdout
             if "isKeyguardShowing=true" in out_win or "showing=true" in out_win:
                 return True
             if "isKeyguardShowing=false" in out_win or "showing=false" in out_win:
                 return False
 
-            out_trust = self._run_adb_raw("shell", "dumpsys trust | grep deviceLocked=", timeout=5).stdout
+            out_trust = self._run_adb_raw("shell", "dumpsys trust | grep deviceLocked=", timeout=8).stdout
             if "deviceLocked=1" in out_trust or "deviceLocked=true" in out_trust:
                 return True
         except Exception:
@@ -367,34 +383,38 @@ class AndroidBingCheckinBot:
         return self.is_screen_awake() and (not self.is_device_locked())
 
     def unlock_device(self):
-        """Tự động kiểm tra thông minh trước khi đánh thức & mở khóa"""
-        # Bước 1: Kiểm tra màn hình có đang thức không
-        if not self.is_screen_awake():
-            log("Màn hình đang TẮT. Đang gửi lệnh đánh thức (KEYCODE_WAKEUP)...", "action")
+        """Tự động kiểm tra thông minh trước khi đánh thức & mở khóa (Áp dụng từ test_wake_and_capture.py)"""
+        # BƯỚC 1: KIỂM TRA NGUỒN MÀN HÌNH
+        awake = self.is_screen_awake()
+        if not awake:
+            log("Phát hiện màn hình đang TẮT (Asleep). Đang gửi lệnh đánh thức (KEYCODE_WAKEUP)...", "action")
             self._adb_shell("input", "keyevent", "KEYCODE_WAKEUP")
-            human_sleep(1.0, 1.5)
+            time.sleep(1.0)
         else:
-            log("Màn hình ĐÃ SÁNG SẴN (Bỏ qua bước đánh thức).", "info")
+            log("Phát hiện màn hình ĐÃ SÁNG SẴN (Awake) -> Bỏ qua lệnh bật màn hình.", "info")
 
-        # Bước 2: Kiểm tra có đang ở màn hình khóa (Keyguard) không
-        if self.is_device_locked():
-            log("Điện thoại ĐANG KHÓA. Vuốt màn hình lên và nhập mã PIN...", "action")
-            mid_x = self.screen_width // 2
-            start_y = int(self.screen_height * 0.82)
-            end_y = int(self.screen_height * 0.30)
-            self._adb_shell("input", "swipe", str(mid_x), str(start_y), str(mid_x), str(end_y), "300")
-            human_sleep(1.0, 1.5)
-
+        # BƯỚC 2: KIỂM TRA MÀN HÌNH KHÓA (KEYGUARD)
+        locked = self.is_device_locked()
+        if locked:
+            log("Phát hiện điện thoại ĐANG KHÓA (Lockscreen active). Vuốt màn hình lên và nhập mã PIN...", "action")
+            self._adb_shell("input", "swipe", "360", "1300", "360", "400", "300")
+            time.sleep(1.0)
             if self.pin:
-                log("Nhập mã PIN mở khóa (bảo mật)...", "action")
-                subprocess.run([self.adb, "-s", self.device, "shell", "input", "text", str(self.pin)],
-                               capture_output=True, timeout=15)
-                human_sleep(0.5, 1.0)
+                log("Nhập mã PIN mở khóa...", "action")
+                self._adb_shell("input", "text", str(self.pin))
+                time.sleep(0.5)
                 self._adb_shell("input", "keyevent", "KEYCODE_ENTER")
-                human_sleep(1.5, 2.0)
-            log("Đã hoàn tất mở khóa điện thoại!", "success")
+                time.sleep(1.5)
+
+            # Xác nhận trạng thái mở khóa
+            if not self.is_device_locked():
+                log("Đã nhập PIN và mở khóa điện thoại thành công!", "success")
+            else:
+                log("Cảnh báo: Thiết bị vẫn báo khóa, thử gửi ENTER lại...", "warn")
+                self._adb_shell("input", "keyevent", "KEYCODE_ENTER")
+                time.sleep(1.0)
         else:
-            log("Điện thoại ĐÃ MỞ KHÓA SẴN! Bỏ qua vuốt màn hình và gõ PIN.", "success")
+            log("Phát hiện điện thoại ĐÃ MỞ KHÓA SẴN HOÀN TOÀN (Unlocked)! Bỏ qua vuốt và gõ PIN.", "success")
 
     def is_app_running(self):
         """Kiểm tra package Bing có tiến trình đang chạy không"""
