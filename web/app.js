@@ -5,8 +5,10 @@
 
 let appState = {
   profiles: [],
-  isRunning: false,
+  isRunning: false,         // PC Bot running
+  isAndroidRunning: false,  // Android Bot running
   currentTask: null,
+  androidTask: null,
   ws: null,
   reconnectTimer: null,
   publicIp: "1.52.0.121",
@@ -437,15 +439,18 @@ async function loadStatus() {
     const data = await res.json();
 
     const wasRunning = appState.isRunning;
+    const wasAndroidRunning = appState.isAndroidRunning;
     const prevTaskId = appState.currentTask?.profile_id;
 
-    appState.isRunning = data.is_running;
+    appState.isRunning = Boolean(data.pc_is_running !== undefined ? data.pc_is_running : data.is_running);
+    appState.isAndroidRunning = Boolean(data.android_is_running);
     appState.currentTask = data.current_task;
+    appState.androidTask = data.android_task;
 
     updateUIState();
 
     // Nếu trạng thái hoạt động thay đổi, cập nhật ngay giao diện profile list và Android status
-    if (wasRunning !== appState.isRunning || prevTaskId !== appState.currentTask?.profile_id) {
+    if (wasRunning !== appState.isRunning || wasAndroidRunning !== appState.isAndroidRunning || prevTaskId !== appState.currentTask?.profile_id) {
       if (appState.profiles && appState.profiles.length > 0) {
         renderProfiles(appState.profiles);
       }
@@ -480,7 +485,12 @@ function updateUIState() {
     btnRunAllFull.disabled = false;
     btnRunAllPC.disabled = false;
     btnRunAllMobile.disabled = false;
-    btnStopAll.disabled = true;
+    btnStopAll.disabled = !appState.isAndroidRunning;
+  }
+
+  // Nút dừng khẩn cấp kích hoạt nếu có bất kỳ tác vụ nào (PC hoặc Android) đang chạy
+  if (appState.isRunning || appState.isAndroidRunning) {
+    btnStopAll.disabled = false;
   }
 
   // Update Live Session & Metadata Inspector
@@ -1165,8 +1175,8 @@ function setupEventListeners() {
 // ANDROID BING APP CHECK-IN HANDLERS
 // ====================================================================
 async function runAndroidCheckin() {
-  if (appState.isRunning) {
-    alert("⚠️ Hệ thống đang chạy tác vụ khác, vui lòng chờ!");
+  if (appState.isAndroidRunning) {
+    alert("⚠️ Tiến trình điểm danh Android đang chạy rồi, vui lòng chờ!");
     return;
   }
   if (!confirm("Bắt đầu điểm danh trên App Microsoft Bing (Android qua Tailscale)?")) {

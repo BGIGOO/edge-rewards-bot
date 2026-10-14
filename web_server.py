@@ -66,13 +66,35 @@ from android_checkin import AndroidBingCheckinBot
 
 class BotTaskManager:
     def __init__(self):
-        self.is_running = False
-        self.current_process = None
-        self.current_task_info = None
-        self.stop_requested = False
+        # PC Edge Search Bot State
+        self.pc_is_running = False
+        self.pc_process = None
+        self.pc_task_info = None
+        self.pc_stop_requested = False
+
+        # Android Mobile Check-in Bot State
+        self.android_is_running = False
+        self.android_process = None
+        self.android_task_info = None
+        self.android_stop_requested = False
+
+        # Shared Log & WebSockets
         self.log_history = deque(maxlen=600)
         self.active_websockets = set()
         self.task_runner_future = None
+
+    @property
+    def is_running(self):
+        """True nếu có bất kỳ tác vụ nào (PC hoặc Android) đang chạy"""
+        return self.pc_is_running or self.android_is_running
+
+    @property
+    def current_process(self):
+        return self.pc_process or self.android_process
+
+    @property
+    def current_task_info(self):
+        return self.pc_task_info or self.android_task_info
 
     def add_log(self, text: str, log_type: str = "info"):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -98,22 +120,26 @@ class BotTaskManager:
             self.active_websockets.discard(ws)
 
     async def run_bot_sequence(self, profiles_to_run: list, mode: str):
-        self.is_running = True
-        self.stop_requested = False
+        if self.pc_is_running:
+            self.add_log("⚠️ Tiến trình tìm kiếm PC đang chạy rồi, vui lòng chờ...", "warn")
+            return
+
+        self.pc_is_running = True
+        self.pc_stop_requested = False
         total_accs = len(profiles_to_run)
         
-        self.add_log(f"🚀 [HỆ THỐNG] Bắt đầu phiên chạy cho {total_accs} tài khoản. Chế độ: {mode.upper()}", "start")
+        self.add_log(f"🚀 [HỆ THỐNG] Bắt đầu phiên chạy tìm kiếm PC cho {total_accs} tài khoản. Chế độ: {mode.upper()}", "start")
         
         for idx, profile in enumerate(profiles_to_run):
-            if self.stop_requested:
-                self.add_log("🛑 [HỆ THỐNG] Nhận lệnh dừng khẩn cấp. Kết thúc chuỗi tác vụ!", "warn")
+            if self.pc_stop_requested:
+                self.add_log("🛑 [HỆ THỐNG] Nhận lệnh dừng khẩn cấp. Kết thúc chuỗi tác vụ PC!", "warn")
                 break
 
             p_id = profile.get("id", str(idx + 1))
             p_name = profile.get("name", f"Profile {p_id}")
             p_dir = get_profile_abs_path(profile)
 
-            self.current_task_info = {
+            self.pc_task_info = {
                 "profile_id": p_id,
                 "profile_name": p_name,
                 "current_index": idx + 1,
@@ -136,7 +162,7 @@ class BotTaskManager:
             ]
 
             try:
-                self.current_process = await asyncio.create_subprocess_exec(
+                self.pc_process = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
@@ -144,12 +170,11 @@ class BotTaskManager:
                 )
 
                 while True:
-                    line = await self.current_process.stdout.readline()
+                    line = await self.pc_process.stdout.readline()
                     if not line:
                         break
                     decoded_line = line.decode("utf-8", errors="replace").rstrip()
                     if decoded_line:
-                        # Phân loại màu log
                         ltype = "info"
                         if "[!]" in decoded_line or "Lỗi" in decoded_line or "Error" in decoded_line:
                             ltype = "error"
@@ -162,10 +187,10 @@ class BotTaskManager:
                         
                         self.add_log(decoded_line, ltype)
 
-                await self.current_process.wait()
-                exit_code = self.current_process.returncode
+                await self.pc_process.wait()
+                exit_code = self.pc_process.returncode
 
-                if self.stop_requested:
+                if self.pc_stop_requested:
                     self.add_log(f"🛑 Đã hủy tiến trình {p_name}.", "warn")
                     break
 
@@ -177,42 +202,45 @@ class BotTaskManager:
             except Exception as e:
                 self.add_log(f"❌ [LỖI TIẾN TRÌNH] {p_name}: {e}", "error")
             finally:
-                self.current_process = None
+                self.pc_process = None
                 kill_zombie_edge_processes(p_dir)
 
             # Nghỉ an toàn giữa 2 profile nếu còn profile tiếp theo
-            if idx < total_accs - 1 and not self.stop_requested:
+            if idx < total_accs - 1 and not self.pc_stop_requested:
                 cooldown_secs = 15
                 self.add_log(f"⏳ Tạm dừng an toàn {cooldown_secs}s trước khi chuyển sang tài khoản tiếp theo...", "warn")
                 for c in range(cooldown_secs, 0, -1):
-                    if self.stop_requested:
+                    if self.pc_stop_requested:
                         break
                     await asyncio.sleep(1)
 
-        self.is_running = False
-        self.current_task_info = None
+        self.pc_is_running = False
+        self.pc_task_info = None
 
         # Kiểm tra tự động điểm danh App Bing Android nếu được bật trong cấu hình
         try:
             cfg = load_config()
             android_cfg = cfg.get("android_settings", {})
-            if android_cfg.get("enabled", True) and android_cfg.get("auto_checkin_after_search", True) and not self.stop_requested:
-                self.add_log("⏳ [HỆ THỐNG] Chuyển tiếp sang quy trình điểm danh tự động trên App Bing Android...", "action")
-                await asyncio.sleep(2)
-                await self.run_android_checkin()
+            if android_cfg.get("enabled", True) and android_cfg.get("auto_checkin_after_search", True) and not self.pc_stop_requested:
+                if not self.android_is_running:
+                    self.add_log("⏳ [HỆ THỐNG] Chuyển tiếp sang quy trình điểm danh tự động trên App Bing Android...", "action")
+                    await asyncio.sleep(2)
+                    asyncio.create_task(self.run_android_checkin())
+                else:
+                    self.add_log("ℹ️ [HỆ THỐNG] Tiến trình điểm danh Android đã đang chạy song song từ trước.", "info")
         except Exception as _ae:
             self.add_log(f"⚠️ Không thể chạy tự động điểm danh Android: {_ae}", "warn")
 
-        self.add_log("🎉 [HỆ THỐNG] Toàn bộ tác vụ đã kết thúc. Sẵn sàng cho phiên tiếp theo!\n", "success")
+        self.add_log("🎉 [HỆ THỐNG] Toàn bộ tác vụ tìm kiếm PC đã kết thúc!\n", "success")
 
     async def run_android_checkin(self, device=None, pin=None, package=None):
-        """Tiến trình thực thi điểm danh trên ứng dụng Microsoft Bing Android qua ADB Tailscale"""
-        if self.is_running:
-            self.add_log("⚠️ Một tiến trình bot khác đang chạy, vui lòng chờ...", "warn")
+        """Tiến trình thực thi điểm danh trên ứng dụng Microsoft Bing Android qua ADB Tailscale (Hỗ trợ chạy song song đa nhiệm)"""
+        if self.android_is_running:
+            self.add_log("⚠️ Tiến trình điểm danh Android đang chạy rồi, vui lòng chờ...", "warn")
             return False
 
-        self.is_running = True
-        self.stop_requested = False
+        self.android_is_running = True
+        self.android_stop_requested = False
 
         cfg = load_config()
         android_cfg = cfg.get("android_settings", {})
@@ -220,7 +248,7 @@ class BotTaskManager:
         pkg = package or android_cfg.get("package_name", "com.microsoft.bing")
         p_pin = pin or android_cfg.get("pin", "")
 
-        self.current_task_info = {
+        self.android_task_info = {
             "profile_id": "android",
             "profile_name": f"Bing App ({dev})",
             "mode": "android_checkin",
@@ -228,7 +256,7 @@ class BotTaskManager:
         }
 
         self.add_log("\n=======================================================", "info")
-        self.add_log(f"📱 [ANDROID] BẮT ĐẦU ĐIỂM DANH APP BING ({dev})", "start")
+        self.add_log(f"📱 [ANDROID] BẮT ĐẦU ĐIỂM DANH APP BING ({dev}) [CHẠY SONG SONG]", "start")
         self.add_log("=======================================================", "info")
 
         cmd = [
@@ -243,7 +271,7 @@ class BotTaskManager:
 
         success = False
         try:
-            self.current_process = await asyncio.create_subprocess_exec(
+            self.android_process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -251,7 +279,7 @@ class BotTaskManager:
             )
 
             while True:
-                line = await self.current_process.stdout.readline()
+                line = await self.android_process.stdout.readline()
                 if not line:
                     break
                 decoded_line = line.decode("utf-8", errors="replace").rstrip()
@@ -267,8 +295,8 @@ class BotTaskManager:
                         ltype = "action"
                     self.add_log(decoded_line, ltype)
 
-            await self.current_process.wait()
-            code = self.current_process.returncode
+            await self.android_process.wait()
+            code = self.android_process.returncode
             success = (code == 0)
 
             if success:
@@ -281,23 +309,22 @@ class BotTaskManager:
             self.add_log(f"❌ [LỖI TIẾN TRÌNH ANDROID] {e}", "error")
             db.save_android_checkin_result("error", str(e), device=dev)
         finally:
-            self.current_process = None
-            self.is_running = False
-            self.current_task_info = None
+            self.android_process = None
+            self.android_is_running = False
+            self.android_task_info = None
 
         return success
 
-    def stop_bot(self):
-        self.stop_requested = True
-        if self.current_process:
+    def stop_pc_bot(self):
+        self.pc_stop_requested = True
+        if self.pc_process:
             try:
-                self.current_process.terminate()
+                self.pc_process.terminate()
             except Exception:
                 pass
-        self.is_running = False
-        self.current_task_info = None
-        self.add_log("🛑 [HỆ THỐNG] Đã yêu cầu dừng toàn bộ tác vụ!", "error")
-        # Quét và dọn dẹp các tiến trình Edge của bot
+        self.pc_is_running = False
+        self.pc_task_info = None
+        self.add_log("🛑 [HỆ THỐNG] Đã yêu cầu dừng tác vụ tìm kiếm PC!", "error")
         try:
             cfg = load_config()
             for p in cfg.get("profiles", []):
@@ -305,6 +332,24 @@ class BotTaskManager:
                 kill_zombie_edge_processes(p_dir)
         except Exception:
             pass
+
+    def stop_android_bot(self):
+        self.android_stop_requested = True
+        if self.android_process:
+            try:
+                self.android_process.terminate()
+            except Exception:
+                pass
+        self.android_is_running = False
+        self.android_task_info = None
+        self.add_log("🛑 [HỆ THỐNG] Đã yêu cầu dừng tác vụ điểm danh Android!", "warn")
+
+    def stop_bot(self):
+        """Dừng tất cả các tác vụ đang chạy (cả PC bot và Android bot)"""
+        if self.pc_is_running:
+            self.stop_pc_bot()
+        if self.android_is_running:
+            self.stop_android_bot()
 
 
 task_mgr = BotTaskManager()
@@ -315,10 +360,13 @@ task_mgr = BotTaskManager()
 # ====================================================================
 
 async def get_status(request):
-    """Lấy trạng thái hoạt động hiện tại"""
+    """Lấy trạng thái hoạt động hiện tại (Hỗ trợ đa nhiệm PC Search & Android Check-in)"""
     return JSONResponse({
-        "is_running": task_mgr.is_running,
-        "current_task": task_mgr.current_task_info,
+        "is_running": task_mgr.pc_is_running,
+        "pc_is_running": task_mgr.pc_is_running,
+        "android_is_running": task_mgr.android_is_running,
+        "current_task": task_mgr.pc_task_info,
+        "android_task": task_mgr.android_task_info,
         "logs_count": len(task_mgr.log_history)
     })
 
@@ -492,11 +540,11 @@ async def check_profile_endpoint(request):
     if not target_profile:
         return JSONResponse({"status": "error", "message": "Không tìm thấy hồ sơ tài khoản"}, status_code=404)
 
-    # Nếu tài khoản này đang chạy tìm kiếm
-    if task_mgr.is_running and task_mgr.current_task_info and str(task_mgr.current_task_info.get("profile_id")) == str(p_id):
+    # Nếu tài khoản này đang chạy tìm kiếm PC
+    if task_mgr.pc_is_running and task_mgr.pc_task_info and str(task_mgr.pc_task_info.get("profile_id")) == str(p_id):
         return JSONResponse({
             "status": "error", 
-            "message": f"Tài khoản {target_profile.get('name')} đang trong phiên chạy bot. Vui lòng đợi bot chạy xong trước khi check điểm!"
+            "message": f"Tài khoản {target_profile.get('name')} đang trong phiên chạy bot PC. Vui lòng đợi bot chạy xong trước khi check điểm!"
         }, status_code=400)
 
     p_name = target_profile.get("name", f"Profile {p_id}")
@@ -539,9 +587,9 @@ async def get_history_endpoint(request):
 
 
 async def run_task(request):
-    """Kích hoạt chạy bot"""
-    if task_mgr.is_running:
-        return JSONResponse({"status": "error", "message": "Bot đang bận chạy một tác vụ khác!"}, status_code=400)
+    """Kích hoạt chạy bot tìm kiếm PC"""
+    if task_mgr.pc_is_running:
+        return JSONResponse({"status": "error", "message": "Bot tìm kiếm PC đang bận chạy một tác vụ khác!"}, status_code=400)
 
     data = await request.json()
     profile_choice = data.get("profile", "all")
@@ -593,8 +641,8 @@ async def stop_profile_task(request):
     p_name = matched[0].get("name", f"Profile {p_id}") if matched else f"Profile {p_id}"
     
     stopped = False
-    if task_mgr.is_running and task_mgr.current_task_info and str(task_mgr.current_task_info.get("profile_id")) == str(p_id):
-        task_mgr.stop_bot()
+    if task_mgr.pc_is_running and task_mgr.pc_task_info and str(task_mgr.pc_task_info.get("profile_id")) == str(p_id):
+        task_mgr.stop_pc_bot()
         task_mgr.add_log(f"🛑 [DỪNG PROFILE] Đã dừng tìm kiếm cho {p_name}!", "warn")
         stopped = True
     else:
@@ -642,12 +690,12 @@ async def save_config_endpoint(request):
 
 
 async def run_android_endpoint(request):
-    """Kích hoạt tiến trình điểm danh trên Android Bing App"""
-    if task_mgr.is_running:
-        return JSONResponse({"status": "error", "message": "Hệ thống đang bận thực hiện tác vụ khác!"}, status_code=400)
+    """Kích hoạt tiến trình điểm danh trên Android Bing App (Hỗ trợ chạy song song cùng lúc với tìm kiếm PC)"""
+    if task_mgr.android_is_running:
+        return JSONResponse({"status": "error", "message": "Tiến trình điểm danh Android đang chạy rồi!"}, status_code=400)
     
     asyncio.create_task(task_mgr.run_android_checkin())
-    return JSONResponse({"status": "success", "message": "Đã bắt đầu tiến trình điểm danh Android!"})
+    return JSONResponse({"status": "success", "message": "Đã bắt đầu tiến trình điểm danh Android song song!"})
 
 
 async def get_android_status_endpoint(request):
@@ -682,14 +730,14 @@ async def get_android_status_endpoint(request):
         "config": android_cfg,
         "latest": latest,
         "device_status": dev_status,
-        "is_running": (task_mgr.is_running and task_mgr.current_task_info and task_mgr.current_task_info.get("mode") == "android_checkin")
+        "is_running": task_mgr.android_is_running
     })
 
 
 async def open_android_app_endpoint(request):
     """Mở ứng dụng Microsoft Bing trên điện thoại Android"""
-    if task_mgr.is_running:
-        return JSONResponse({"status": "error", "message": "Bot đang bận thực hiện tác vụ khác!"}, status_code=400)
+    if task_mgr.android_is_running:
+        return JSONResponse({"status": "error", "message": "Điểm danh Android đang chạy, vui lòng chờ..."}, status_code=400)
 
     cfg = load_config()
     android_cfg = cfg.get("android_settings", {})
@@ -723,8 +771,8 @@ async def open_android_app_endpoint(request):
 
 async def close_android_app_endpoint(request):
     """Tắt (buộc dừng) ứng dụng Bing trên điện thoại Android"""
-    if task_mgr.is_running:
-        return JSONResponse({"status": "error", "message": "Bot đang bận thực hiện tác vụ khác!"}, status_code=400)
+    if task_mgr.android_is_running:
+        return JSONResponse({"status": "error", "message": "Điểm danh Android đang chạy, vui lòng chờ..."}, status_code=400)
 
     cfg = load_config()
     android_cfg = cfg.get("android_settings", {})
@@ -753,6 +801,12 @@ async def close_android_app_endpoint(request):
         err_msg = str(e) or "Lỗi kết nối ADB"
         task_mgr.add_log(f"❌ [ANDROID] Lỗi khi tắt App: {err_msg}", "error")
         return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
+
+
+async def stop_android_endpoint(request):
+    """Dừng tiến trình điểm danh Android"""
+    task_mgr.stop_android_bot()
+    return JSONResponse({"status": "success", "message": "Đã yêu cầu dừng điểm danh Android!"})
 
 
 async def reconnect_android_endpoint(request):
@@ -968,6 +1022,7 @@ routes = [
     Route("/api/logs/clear", clear_logs_endpoint, methods=["POST"]),
     Route("/api/history", get_history_endpoint, methods=["GET"]),
     Route("/api/android/checkin", run_android_endpoint, methods=["POST"]),
+    Route("/api/android/stop", stop_android_endpoint, methods=["POST"]),
     Route("/api/android/status", get_android_status_endpoint, methods=["GET"]),
     Route("/api/android/app/open", open_android_app_endpoint, methods=["POST"]),
     Route("/api/android/app/close", close_android_app_endpoint, methods=["POST"]),
