@@ -1675,6 +1675,18 @@ body {
   border: 1px solid #FECACA;
 }
 
+.checkin-status-badge.badge-screen-awake {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.checkin-status-badge.badge-screen-asleep {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
 .checkin-pulse-dot {
   width: 6px;
   height: 6px;
@@ -1945,6 +1957,33 @@ body {
 .btn-app-action.btn-app-close:hover:not(:disabled) {
   background: #DC2626;
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-app-action.btn-screen-toggle {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.btn-app-action.btn-screen-on {
+  background: #F59E0B;
+  color: #FFFFFF;
+  border-color: #D97706;
+}
+.btn-app-action.btn-screen-on:hover:not(:disabled) {
+  background: #D97706;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-app-action.btn-screen-off {
+  background: #475569;
+  color: #FFFFFF;
+  border-color: #334155;
+}
+.btn-app-action.btn-screen-off:hover:not(:disabled) {
+  background: #334155;
+  box-shadow: 0 2px 8px rgba(71, 85, 105, 0.4);
   transform: translateY(-1px);
 }
 

@@ -722,6 +722,8 @@ async def get_android_status_endpoint(request):
             "app_status": "unreachable",
             "app_running": False,
             "app_foreground": False,
+            "screen_awake": None,
+            "screen_unlocked": None,
             "message": f"Timeout hoặc lỗi kiểm tra: {e}"
         }
 
@@ -836,6 +838,109 @@ async def reconnect_android_endpoint(request):
     except Exception as e:
         err_msg = str(e) or "Lỗi kết nối ADB"
         task_mgr.add_log(f"❌ [ANDROID] Lỗi kết nối: {err_msg}", "error")
+        return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
+
+
+async def turn_on_android_screen_endpoint(request):
+    """Bật màn hình điện thoại, nhập mã PIN mở khóa và đưa về màn hình chính"""
+    if task_mgr.android_is_running:
+        return JSONResponse({"status": "error", "message": "Điểm danh Android đang chạy, vui lòng chờ..."}, status_code=400)
+
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+    pkg = android_cfg.get("package_name", "com.microsoft.bing")
+    pin = android_cfg.get("pin", "")
+
+    loop = asyncio.get_event_loop()
+    def _run():
+        bot = AndroidBingCheckinBot(device=dev, pin=pin, package=pkg)
+        return bot.turn_on_device()
+
+    try:
+        task_mgr.add_log(f"📱 [ĐIỆN THOẠI] Bật màn hình, nhập PIN mở khóa và vào màn hình chính ({dev})...", "action")
+        res = await asyncio.wait_for(loop.run_in_executor(None, _run), timeout=25.0)
+        if res.get("success"):
+            task_mgr.add_log("✓ [ĐIỆN THOẠI] Đã bật điện thoại, mở khóa và vào màn hình chính!", "success")
+            return JSONResponse({"status": "success", **res})
+        else:
+            task_mgr.add_log(f"⚠️ [ĐIỆN THOẠI] {res.get('message')}", "warn")
+            return JSONResponse({"status": "error", **res}, status_code=400)
+    except asyncio.TimeoutError:
+        msg = "Timeout khi đánh thức / mở khóa điện thoại qua ADB."
+        task_mgr.add_log(f"⚠️ [ĐIỆN THOẠI] {msg}", "warn")
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    except Exception as e:
+        err_msg = str(e) or "Lỗi kết nối ADB"
+        task_mgr.add_log(f"❌ [ĐIỆN THOẠI] Lỗi bật màn hình: {err_msg}", "error")
+        return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
+
+
+async def turn_off_android_screen_endpoint(request):
+    """Tắt màn hình điện thoại (Sleep/Lock)"""
+    if task_mgr.android_is_running:
+        return JSONResponse({"status": "error", "message": "Điểm danh Android đang chạy, vui lòng chờ..."}, status_code=400)
+
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+    pkg = android_cfg.get("package_name", "com.microsoft.bing")
+
+    loop = asyncio.get_event_loop()
+    def _run():
+        bot = AndroidBingCheckinBot(device=dev, package=pkg)
+        return bot.turn_off_device()
+
+    try:
+        task_mgr.add_log(f"📱 [ĐIỆN THOẠI] Gửi lệnh tắt màn hình điện thoại ({dev})...", "action")
+        res = await asyncio.wait_for(loop.run_in_executor(None, _run), timeout=15.0)
+        if res.get("success"):
+            task_mgr.add_log("✓ [ĐIỆN THOẠI] Đã tắt màn hình điện thoại!", "success")
+            return JSONResponse({"status": "success", **res})
+        else:
+            task_mgr.add_log(f"⚠️ [ĐIỆN THOẠI] {res.get('message')}", "warn")
+            return JSONResponse({"status": "error", **res}, status_code=400)
+    except asyncio.TimeoutError:
+        msg = "Timeout khi tắt màn hình điện thoại qua ADB."
+        task_mgr.add_log(f"⚠️ [ĐIỆN THOẠI] {msg}", "warn")
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    except Exception as e:
+        err_msg = str(e) or "Lỗi kết nối ADB"
+        task_mgr.add_log(f"❌ [ĐIỆN THOẠI] Lỗi tắt màn hình: {err_msg}", "error")
+        return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
+
+
+async def toggle_android_screen_endpoint(request):
+    """Chuyển đổi trạng thái Bật (mở khóa vào Home) / Tắt màn hình điện thoại"""
+    if task_mgr.android_is_running:
+        return JSONResponse({"status": "error", "message": "Điểm danh Android đang chạy, vui lòng chờ..."}, status_code=400)
+
+    cfg = load_config()
+    android_cfg = cfg.get("android_settings", {})
+    dev = android_cfg.get("device_address", "100.71.117.39:5555")
+    pkg = android_cfg.get("package_name", "com.microsoft.bing")
+    pin = android_cfg.get("pin", "")
+
+    loop = asyncio.get_event_loop()
+    def _run():
+        bot = AndroidBingCheckinBot(device=dev, pin=pin, package=pkg)
+        return bot.toggle_screen()
+
+    try:
+        res = await asyncio.wait_for(loop.run_in_executor(None, _run), timeout=25.0)
+        if res.get("success"):
+            task_mgr.add_log(f"✓ [ĐIỆN THOẠI] {res.get('message')}", "success")
+            return JSONResponse({"status": "success", **res})
+        else:
+            task_mgr.add_log(f"⚠️ [ĐIỆN THOẠI] {res.get('message')}", "warn")
+            return JSONResponse({"status": "error", **res}, status_code=400)
+    except asyncio.TimeoutError:
+        msg = "Timeout khi thao tác màn hình điện thoại qua ADB."
+        task_mgr.add_log(f"⚠️ [ĐIỆN THOẠI] {msg}", "warn")
+        return JSONResponse({"status": "error", "message": msg}, status_code=400)
+    except Exception as e:
+        err_msg = str(e) or "Lỗi kết nối ADB"
+        task_mgr.add_log(f"❌ [ĐIỆN THOẠI] Lỗi thao tác màn hình: {err_msg}", "error")
         return JSONResponse({"status": "error", "message": err_msg}, status_code=500)
 
 
@@ -1026,6 +1131,9 @@ routes = [
     Route("/api/android/status", get_android_status_endpoint, methods=["GET"]),
     Route("/api/android/app/open", open_android_app_endpoint, methods=["POST"]),
     Route("/api/android/app/close", close_android_app_endpoint, methods=["POST"]),
+    Route("/api/android/screen/on", turn_on_android_screen_endpoint, methods=["POST"]),
+    Route("/api/android/screen/off", turn_off_android_screen_endpoint, methods=["POST"]),
+    Route("/api/android/screen/toggle", toggle_android_screen_endpoint, methods=["POST"]),
     Route("/api/android/connect", reconnect_android_endpoint, methods=["POST"]),
     Route("/api/metadata", get_metadata_endpoint, methods=["GET"]),
     WebSocketRoute("/ws/logs", websocket_logs),

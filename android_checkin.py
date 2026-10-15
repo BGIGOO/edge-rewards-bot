@@ -200,6 +200,7 @@ class AndroidBingCheckinBot:
                 "app_status": "unreachable",
                 "app_running": False,
                 "app_foreground": False,
+                "screen_awake": None,
                 "screen_unlocked": None,
                 "message": f"Không thể ping tới IP Tailscale ({self.host}). Vui lòng mở VPN Tailscale trên máy tính & điện thoại!"
             }
@@ -217,6 +218,7 @@ class AndroidBingCheckinBot:
                 "app_status": "unreachable",
                 "app_running": False,
                 "app_foreground": False,
+                "screen_awake": None,
                 "screen_unlocked": None,
                 "message": f"Mạng Tailscale thông tốt ({ping_ms}ms), nhưng {desc}. Hãy bật 'Gỡ lỗi qua Wi-Fi' trên điện thoại!"
             }
@@ -224,6 +226,7 @@ class AndroidBingCheckinBot:
         # 3. Đã kết nối ADB -> Kiểm tra màn hình & ứng dụng Bing
         is_run = self.is_app_running()
         is_fg = self.is_app_foreground() if is_run else False
+        is_awake = self.is_screen_awake()
         unlocked = self.is_screen_unlocked()
 
         if is_fg:
@@ -244,6 +247,7 @@ class AndroidBingCheckinBot:
             "app_status": app_status,
             "app_running": is_run,
             "app_foreground": is_fg,
+            "screen_awake": is_awake,
             "screen_unlocked": unlocked,
             "message": app_desc
         }
@@ -473,6 +477,61 @@ class AndroidBingCheckinBot:
             return {"success": True, "message": "Đã tắt App Bing thành công!"}
         return {"success": False, "message": "Gửi lệnh force-stop nhưng ứng dụng vẫn còn chạy."}
 
+    def turn_on_device(self):
+        """
+        Bật điện thoại (ON):
+        - Bật sáng màn hình (KEYCODE_WAKEUP).
+        - Vuốt và gõ mật khẩu PIN mở khóa (nếu đang ở màn hình khóa).
+        - Trở về màn hình chính (KEYCODE_HOME).
+        """
+        self.ensure_connected()
+        self.unlock_device()
+        log("Đưa điện thoại về màn hình chính (Home)...", "action")
+        self._adb_shell("input", "keyevent", "KEYCODE_HOME")
+        time.sleep(0.3)
+        self._adb_shell("input", "keyevent", "KEYCODE_HOME")
+        log("Đã bật điện thoại, mở khóa và vào màn hình chính!", "success")
+        return {
+            "success": True,
+            "screen_awake": True,
+            "message": "Đã bật điện thoại, mở khóa và vào màn hình chính thành công!"
+        }
+
+    def turn_off_device(self):
+        """
+        Tắt điện thoại (OFF):
+        - Đơn giản là tắt màn hình đi (KEYCODE_SLEEP / KEYCODE_POWER).
+        """
+        self.ensure_connected()
+        if self.is_screen_awake():
+            log("Màn hình đang sáng, gửi lệnh tắt màn hình (KEYCODE_SLEEP)...", "action")
+            self._adb_shell("input", "keyevent", "KEYCODE_SLEEP")
+            time.sleep(0.5)
+            if self.is_screen_awake():
+                self._adb_shell("input", "keyevent", "KEYCODE_POWER")
+                time.sleep(0.5)
+            log("Đã tắt màn hình điện thoại!", "success")
+            return {
+                "success": True,
+                "screen_awake": False,
+                "message": "Đã tắt màn hình điện thoại thành công!"
+            }
+        else:
+            log("Màn hình điện thoại hiện tại đã tắt sẵn rồi.", "info")
+            return {
+                "success": True,
+                "screen_awake": False,
+                "message": "Màn hình điện thoại đã tắt sẵn rồi."
+            }
+
+    def toggle_screen(self):
+        """Chuyển đổi trạng thái Bật (mở khóa vào Home) / Tắt màn hình điện thoại"""
+        self.ensure_connected()
+        if self.is_screen_awake():
+            return self.turn_off_device()
+        else:
+            return self.turn_on_device()
+
     def capture_screenshot(self, save_path=None):
         """
         Chụp ảnh màn hình qua ADB và lưu vào save_path hoặc trả về PIL Image.
@@ -672,6 +731,14 @@ class AndroidBingCheckinBot:
 
         if already_done:
             log("🎉 Hôm nay bạn đã điểm danh nhận xu (5 điểm) rồi!", "success")
+            # Thoát ứng dụng và trở về màn hình chính
+            try:
+                log(f"Thoát ứng dụng {self.package} và trở về màn hình chính...", "action")
+                self.close_app()
+                self._adb_shell("input", "keyevent", "KEYCODE_HOME")
+            except Exception as _ex:
+                log(f"Cảnh báo khi thoát app: {_ex}", "warn")
+
             return {
                 "success": True,
                 "already_done": True,
@@ -700,6 +767,15 @@ class AndroidBingCheckinBot:
             else:
                 log("⚠️ Đã gửi lệnh bấm nhận xu, đang chờ máy chủ Bing ghi nhận điểm.", "warn")
 
+        # Thoát ứng dụng và trở về màn hình chính
+        try:
+            log(f"Thoát ứng dụng {self.package} và trở về màn hình chính...", "action")
+            self.close_app()
+            self._adb_shell("input", "keyevent", "KEYCODE_HOME")
+            human_sleep(0.5, 1.0)
+        except Exception as _ex:
+            log(f"Cảnh báo khi thoát app: {_ex}", "warn")
+
         return {
             "success": success,
             "already_done": False,
@@ -724,6 +800,9 @@ def main():
     parser.add_argument("--status", action="store_true", help="Kiểm tra trạng thái kết nối & App Bing (JSON)")
     parser.add_argument("--open-app", action="store_true", help="Mở ứng dụng Microsoft Bing trên điện thoại")
     parser.add_argument("--close-app", action="store_true", help="Tắt (buộc dừng) ứng dụng Bing trên điện thoại")
+    parser.add_argument("--screen-on", action="store_true", help="Bật điện thoại, nhập PIN mở khóa và vào màn hình chính")
+    parser.add_argument("--screen-off", action="store_true", help="Tắt màn hình điện thoại (Sleep)")
+    parser.add_argument("--screen-toggle", action="store_true", help="Bật / Tắt màn hình điện thoại")
     args = parser.parse_args()
 
     bot = AndroidBingCheckinBot(device=args.device, pin=args.pin, package=args.package)
@@ -733,6 +812,18 @@ def main():
         st = bot.get_device_status()
         print(json.dumps(st, ensure_ascii=False, indent=2))
         sys.exit(0)
+
+    if args.screen_on:
+        res = bot.turn_on_device()
+        sys.exit(0 if res.get("success") else 1)
+
+    if args.screen_off:
+        res = bot.turn_off_device()
+        sys.exit(0 if res.get("success") else 1)
+
+    if args.screen_toggle:
+        res = bot.toggle_screen()
+        sys.exit(0 if res.get("success") else 1)
 
     if args.open_app:
         res = bot.open_app()

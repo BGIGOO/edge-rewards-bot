@@ -9,6 +9,7 @@ let appState = {
   isAndroidRunning: false,  // Android Bot running
   currentTask: null,
   androidTask: null,
+  screenAwake: null,        // Trạng thái màn hình điện thoại (true = Sáng/Awake, false = Tắt/Asleep)
   ws: null,
   reconnectTimer: null,
   publicIp: "1.52.0.121",
@@ -55,6 +56,11 @@ const btnCardPreviewFrame = document.getElementById("btnCardPreviewFrame");
 // New Android & Tailscale Component Elements
 const checkinAppBadge = document.getElementById("checkinAppBadge");
 const checkinAppLabel = document.getElementById("checkinAppLabel");
+const checkinScreenBadge = document.getElementById("checkinScreenBadge");
+const checkinScreenLabel = document.getElementById("checkinScreenLabel");
+const btnToggleScreen = document.getElementById("btnToggleScreen");
+const screenToggleIcon = document.getElementById("screenToggleIcon");
+const screenToggleText = document.getElementById("screenToggleText");
 const checkinPingDot = document.getElementById("checkinPingDot");
 const checkinNetBadge = document.getElementById("checkinNetBadge");
 const checkinConnStatus = document.getElementById("checkinConnStatus");
@@ -1283,7 +1289,43 @@ async function loadAndroidStatus() {
       }
     }
 
-    // 3. Cập nhật trạng thái App Bing Badge
+    // 3. Cập nhật trạng thái Màn Hình Điện Thoại & App Bing Badge
+    const isAwake = devStatus.screen_awake;
+    appState.screenAwake = isAwake;
+
+    // Badge màn hình điện thoại
+    if (checkinScreenBadge && checkinScreenLabel) {
+      checkinScreenBadge.className = "checkin-status-badge";
+      if (isAwake === true) {
+        checkinScreenBadge.classList.add("badge-screen-awake");
+        checkinScreenLabel.innerText = "🟢 Màn hình: Bật";
+      } else if (isAwake === false) {
+        checkinScreenBadge.classList.add("badge-screen-asleep");
+        checkinScreenLabel.innerText = "⚪ Màn hình: Tắt";
+      } else {
+        checkinScreenBadge.classList.add("badge-idle");
+        checkinScreenLabel.innerText = "⚪ Màn hình: --";
+      }
+    }
+
+    // Nút Bật / Tắt điện thoại (ON / OFF)
+    if (btnToggleScreen && screenToggleIcon && screenToggleText) {
+      if (isAwake === true) {
+        // Màn hình đang BẬT -> Nút cho phép TẮT (OFF)
+        btnToggleScreen.className = "btn-app-action btn-screen-toggle btn-screen-off";
+        btnToggleScreen.title = "Màn hình đang BẬT. Bấm để TẮT màn hình điện thoại (OFF)";
+        screenToggleIcon.innerText = "💤";
+        screenToggleText.innerText = "Tắt Màn Hình (OFF)";
+      } else {
+        // Màn hình đang TẮT -> Nút cho phép BẬT + mở khóa PIN + vào Home (ON)
+        btnToggleScreen.className = "btn-app-action btn-screen-toggle btn-screen-on";
+        btnToggleScreen.title = "Màn hình đang TẮT. Bấm để BẬT điện thoại, gõ PIN mở khóa và vào Màn hình chính (ON)";
+        screenToggleIcon.innerText = "⚡";
+        screenToggleText.innerText = "Bật ĐT (ON)";
+      }
+    }
+
+    // Badge App Bing
     const appState = devStatus.app_status || "unknown";
     if (checkinAppBadge && checkinAppLabel) {
       checkinAppBadge.className = "checkin-status-badge";
@@ -1318,10 +1360,12 @@ async function loadAndroidStatus() {
       if (btnOpenBingApp) btnOpenBingApp.disabled = true;
       if (btnCloseBingApp) btnCloseBingApp.disabled = true;
       if (btnCheckBingApp) btnCheckBingApp.disabled = true;
+      if (btnToggleScreen) btnToggleScreen.disabled = true;
     } else {
       if (btnOpenBingApp) btnOpenBingApp.disabled = false;
       if (btnCloseBingApp) btnCloseBingApp.disabled = false;
       if (btnCheckBingApp) btnCheckBingApp.disabled = false;
+      if (btnToggleScreen) btnToggleScreen.disabled = false;
 
       if (status === "completed") {
         if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-success";
@@ -1399,9 +1443,12 @@ async function checkBingAppStatus(showAlert = false) {
         let info = `[KẾT QUẢ KIỂM TRA ĐIỆN THOẠI]\n\n`;
         info += `• Mạng Tailscale: ${ds.ping_ok ? `Đã kết nối (${ds.ping_ms}ms)` : "Mất kết nối"}\n`;
         info += `• Cổng ADB: ${ds.adb_state}\n`;
+        if (ds.screen_awake !== null && ds.screen_awake !== undefined) {
+          info += `• Màn hình: ${ds.screen_awake ? "BẬT (Awake)" : "TẮT (Asleep)"}\n`;
+        }
         info += `• Trạng thái App Bing: ${String(ds.app_status || "unknown").toUpperCase()} (${ds.message || ""})\n`;
         if (ds.screen_unlocked !== null && ds.screen_unlocked !== undefined) {
-          info += `• Màn hình: ${ds.screen_unlocked ? "Đã mở khóa" : "Đang khóa"}\n`;
+          info += `• Khóa màn hình: ${ds.screen_unlocked ? "Đã mở khóa" : "Đang khóa (Keyguard)"}\n`;
         }
         alert(info);
       }
@@ -1474,6 +1521,63 @@ async function closeBingApp() {
         </svg>
         <span>Tắt App</span>`;
     }
+  }
+}
+
+async function toggleScreenPhone() {
+  if (btnToggleScreen) {
+    btnToggleScreen.disabled = true;
+    if (screenToggleText) screenToggleText.innerText = "⏳ Đang xử lý...";
+  }
+  try {
+    const isAwake = appState.screenAwake;
+    // Nếu màn hình đang bật thì tắt; nếu đang tắt thì bật và mở khóa vào Home
+    const endpoint = isAwake === true ? "/api/android/screen/off" : "/api/android/screen/on";
+    const res = await fetch(endpoint, { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.status === "success") {
+      alert(`[Điện Thoại] ${data.message || "Thao tác thành công!"}`);
+    } else {
+      alert(`[Thông báo] ${data.message || "Không thể thực hiện thao tác màn hình"}`);
+    }
+    await loadAndroidStatus();
+  } catch (e) {
+    alert(`Lỗi thao tác điện thoại: ${e.message}`);
+  } finally {
+    if (btnToggleScreen) {
+      btnToggleScreen.disabled = false;
+    }
+    await loadAndroidStatus();
+  }
+}
+
+async function turnOnPhoneScreen() {
+  try {
+    const res = await fetch("/api/android/screen/on", { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.status === "success") {
+      alert(`[Điện Thoại] ${data.message}`);
+    } else {
+      alert(`[Thông báo] ${data.message}`);
+    }
+    await loadAndroidStatus();
+  } catch (e) {
+    alert(`Lỗi bật điện thoại: ${e.message}`);
+  }
+}
+
+async function turnOffPhoneScreen() {
+  try {
+    const res = await fetch("/api/android/screen/off", { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.status === "success") {
+      alert(`[Điện Thoại] ${data.message}`);
+    } else {
+      alert(`[Thông báo] ${data.message}`);
+    }
+    await loadAndroidStatus();
+  } catch (e) {
+    alert(`Lỗi tắt màn hình: ${e.message}`);
   }
 }
 

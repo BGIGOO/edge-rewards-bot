@@ -212,6 +212,12 @@
           </div>
 
           <div class="checkin-header-actions">
+            <!-- Screen Status Badge -->
+            <span id="checkinScreenBadge" class="checkin-status-badge badge-idle" title="Trạng thái màn hình điện thoại">
+              <span class="checkin-pulse-dot"></span>
+              <span id="checkinScreenLabel">Màn hình: --</span>
+            </span>
+
             <!-- App Bing Status Badge -->
             <span id="checkinAppBadge" class="checkin-status-badge badge-idle" title="Trạng thái App Bing trên điện thoại">
               <span class="checkin-pulse-dot"></span>
@@ -279,8 +285,14 @@
                 <span id="btnCardRunCheckinText">📱 Điểm Danh Ngay</span>
               </button>
 
-              <!-- Nhóm nút Bật / Tắt / Kiểm tra App Bing -->
+              <!-- Nhóm nút Bật / Tắt / Kiểm tra App Bing & Điện Thoại -->
               <div class="checkin-app-controls-group">
+                <!-- NÚT BẬT / TẮT ĐIỆN THOẠI (ON/OFF) -->
+                <button id="btnToggleScreen" class="btn-app-action btn-screen-toggle btn-screen-on" onclick="toggleScreenPhone()" title="Bấm ON: Mở màn hình + gõ PIN + vào màn hình chính; Bấm OFF: Tắt màn hình điện thoại">
+                  <span id="screenToggleIcon">⚡</span>
+                  <span id="screenToggleText">Bật ĐT (ON)</span>
+                </button>
+
                 <button id="btnCheckBingApp" class="btn-app-action btn-app-check" onclick="checkBingAppStatus(true)" title="Kiểm tra app Bing đã mở chưa">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                     <circle cx="11" cy="11" r="8"></circle>
