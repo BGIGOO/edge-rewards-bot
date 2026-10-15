@@ -78,7 +78,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
-          <span>CHẠY TẤT CẢ (FULL)</span>
+          <span>Chạy Tất Cả (Full)</span>
         </button>
         <button id="btnRunAllPC" class="btn btn-secondary" title="Chỉ chạy tìm kiếm Desktop PC cho tất cả tài khoản">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -100,13 +100,13 @@
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
             <line x1="12" y1="18" x2="12.01" y2="18"></line>
           </svg>
-          <span>📱 Điểm Danh App Bing</span>
+          <span>Điểm Danh Bing App</span>
         </button>
         <button id="btnStopAll" class="btn btn-danger" disabled title="Dừng ngay lập tức toàn bộ tác vụ bot">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
             <rect x="5" y="5" width="14" height="14" rx="2"></rect>
           </svg>
-          <span>DỪNG KHẨN CẤP</span>
+          <span>Dừng Khẩn Cấp</span>
         </button>
       </div>
 
@@ -137,7 +137,7 @@
             <div class="meta-item">
               <span class="meta-label">IP Hiện Tại (Public IP)</span>
               <div class="meta-value-wrap">
-                <span class="meta-flag">🇻🇳</span>
+                <span class="meta-subtag">VN</span>
                 <span id="metaIpAddress" class="meta-val highlight-ip">1.52.0.121</span>
                 <span class="meta-subtag">Direct</span>
               </div>
@@ -282,15 +282,15 @@
                   <rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect>
                   <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5"></line>
                 </svg>
-                <span id="btnCardRunCheckinText">📱 Điểm Danh Ngay</span>
+                <span id="btnCardRunCheckinText">Điểm Danh Ngay</span>
               </button>
 
               <!-- Nhóm nút Bật / Tắt / Kiểm tra App Bing & Điện Thoại -->
               <div class="checkin-app-controls-group">
                 <!-- NÚT BẬT / TẮT ĐIỆN THOẠI (ON/OFF) -->
                 <button id="btnToggleScreen" class="btn-app-action btn-screen-toggle btn-screen-on" onclick="toggleScreenPhone()" title="Bấm ON: Mở màn hình + gõ PIN + vào màn hình chính; Bấm OFF: Tắt màn hình điện thoại">
-                  <span id="screenToggleIcon">⚡</span>
-                  <span id="screenToggleText">Bật ĐT (ON)</span>
+                  <span id="screenToggleIcon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg></span>
+                  <span id="screenToggleText">Bật ĐT</span>
                 </button>
 
                 <button id="btnCheckBingApp" class="btn-app-action btn-app-check" onclick="checkBingAppStatus(true)" title="Kiểm tra app Bing đã mở chưa">
@@ -335,7 +335,7 @@
             <div class="preview-mini-header">
               <span class="preview-mini-title">Đối Soát Màn Hình (ADB)</span>
               <button type="button" class="btn-xs-link" onclick="openFrameModal()" title="Xem ảnh chụp kích thước đầy đủ">
-                <span>🔍 Phóng to</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -1px; margin-right: 2px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span>Phóng to</span>
               </button>
             </div>
 
@@ -650,7 +650,7 @@
     <div class="modal-box modal-wide" style="max-width: 820px;">
       <div class="modal-header">
         <div>
-          <h3>📷 Ảnh Màn Hình Điểm Danh Android</h3>
+          <h3>Ảnh Màn Hình Điểm Danh Android</h3>
           <p class="modal-subtitle">Đối soát thực tế màn hình điện thoại chụp qua ADB Tailscale.</p>
         </div>
         <button class="modal-close" onclick="closeFrameModal()">&times;</button>
@@ -694,7 +694,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
-            <span id="btnSeedKeywordsText">✨ AI Thêm 50 Từ Khóa Mới</span>
+            <span id="btnSeedKeywordsText">AI Thêm 50 Từ Khóa</span>
           </button>
         </div>
       </div>

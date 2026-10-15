@@ -69,20 +69,20 @@ async function loadAndroidStatus() {
       checkinScreenBadge.className = "checkin-status-badge";
       if (appState.screenAwake === true) {
         checkinScreenBadge.classList.add("badge-screen-awake");
-        checkinScreenLabel.innerText = "🟢 Màn hình: Bật";
+        checkinScreenLabel.innerText = "Màn hình: Bật";
       } else if (appState.screenAwake === false) {
         checkinScreenBadge.classList.add("badge-screen-asleep");
-        checkinScreenLabel.innerText = "⚪ Màn hình: Tắt";
+        checkinScreenLabel.innerText = "Màn hình: Tắt";
       } else {
         checkinScreenBadge.classList.add("badge-idle");
-        checkinScreenLabel.innerText = "⚪ Màn hình: --";
+        checkinScreenLabel.innerText = "Màn hình: --";
       }
     }
 
     if (btnToggleScreen && screenToggleIcon && screenToggleText) {
       const awake = appState.screenAwake === true;
       btnToggleScreen.className = `btn-app-action btn-screen-toggle ${awake ? "btn-screen-off" : "btn-screen-on"}`;
-      screenToggleIcon.innerText = awake ? "💤" : "⚡";
+      screenToggleIcon.innerText = "";
       screenToggleText.innerText = awake ? "Tắt Màn Hình (OFF)" : "Bật ĐT (ON)";
     }
 
@@ -90,11 +90,11 @@ async function loadAndroidStatus() {
     const appSt = devStatus.app_status || "unknown";
     if (checkinAppBadge && checkinAppLabel) {
       const appMap = {
-        foreground: ["badge-app-fg", "🟢 App: Đang mở"],
-        background: ["badge-app-bg", "🟡 App: Chạy ngầm"],
-        closed: ["badge-app-closed", "⚪ App: Đã tắt"]
+        foreground: ["badge-app-fg", "App: Đang mở"],
+        background: ["badge-app-bg", "App: Chạy ngầm"],
+        closed: ["badge-app-closed", "App: Đã tắt"]
       };
-      const [cls, txt] = appMap[appSt] || ["badge-app-unreachable", "🔴 App: Mất kết nối"];
+      const [cls, txt] = appMap[appSt] || ["badge-app-unreachable", "App: Mất kết nối"];
       checkinAppBadge.className = `checkin-status-badge ${cls}`;
       checkinAppLabel.innerText = txt;
     }
@@ -102,7 +102,7 @@ async function loadAndroidStatus() {
     // Checkin Status Badges & Buttons
     if (isRunning) {
       if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-running";
-      if (checkinStatusLabel) checkinStatusLabel.innerText = "⏳ Đang điểm danh...";
+      if (checkinStatusLabel) checkinStatusLabel.innerText = "Đang điểm danh...";
       if (checkinCallout) checkinCallout.className = "checkin-callout callout-running";
       if (checkinMessageText) checkinMessageText.innerText = "Bot đang điều khiển App Bing trên Android...";
       [btnCardRunCheckin, btnRunAndroidCheckin, btnOpenBingApp, btnCloseBingApp, btnCheckBingApp, btnToggleScreen].forEach(b => { if (b) b.disabled = true; });
@@ -112,22 +112,22 @@ async function loadAndroidStatus() {
 
       if (status === "completed") {
         if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-success";
-        if (checkinStatusLabel) checkinStatusLabel.innerText = "✓ Đã điểm danh hôm nay";
+        if (checkinStatusLabel) checkinStatusLabel.innerText = "Đã điểm danh hôm nay";
         if (checkinCallout) checkinCallout.className = "checkin-callout callout-success";
         if (checkinMessageText) checkinMessageText.innerText = (devStatus.message ? `${devStatus.message} • ` : "") + (latest.message || "Điểm danh hoàn tất!");
-        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "🔄 Điểm Danh Lại";
+        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "Điểm Danh Lại";
       } else if (status === "failed" || status === "error") {
         if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-error";
-        if (checkinStatusLabel) checkinStatusLabel.innerText = "! Lỗi / Chưa xong";
+        if (checkinStatusLabel) checkinStatusLabel.innerText = "Lỗi / Chưa xong";
         if (checkinCallout) checkinCallout.className = "checkin-callout callout-error";
         if (checkinMessageText) checkinMessageText.innerText = devStatus.message || latest.message || "Lỗi hoặc không tìm thấy nút Rewards.";
-        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "⚡ Thử Lại Ngay";
+        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "Thử Lại Ngay";
       } else {
         if (checkinStatusBadge) checkinStatusBadge.className = "checkin-status-badge badge-idle";
         if (checkinStatusLabel) checkinStatusLabel.innerText = "Chưa điểm danh";
         if (checkinCallout) checkinCallout.className = "checkin-callout callout-idle";
         if (checkinMessageText) checkinMessageText.innerText = devStatus.message || "Sẵn sàng điểm danh tích streak trên App Bing.";
-        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "📱 Điểm Danh Ngay";
+        if (btnCardRunCheckinText) btnCardRunCheckinText.innerText = "Điểm Danh Ngay";
       }
     }
 

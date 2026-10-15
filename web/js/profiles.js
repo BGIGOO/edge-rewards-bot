@@ -82,9 +82,9 @@ function renderProfiles(profiles) {
         <div class="pts-badge-cell">
           <div class="pts-today-tag"><span class="pts-today-val">${todayPts}</span><span class="pts-label">hôm nay</span></div>
           <div class="pts-breakdown-mini">
-            <span class="pts-pill" title="Desktop Bing Search">💻 ${pcPts}</span>
-            <span class="pts-pill" title="Mobile Bing Search">📱 ${mobPts}</span>
-            <span class="pts-pill pts-total-pill" title="Điểm khả dụng">⭐ ${totalPts}</span>
+            <span class="pts-pill" title="Desktop Bing Search"><span class="pts-tag">PC</span> ${pcPts}</span>
+            <span class="pts-pill" title="Mobile Bing Search"><span class="pts-tag">MOB</span> ${mobPts}</span>
+            <span class="pts-pill pts-total-pill" title="Điểm khả dụng"><span class="pts-tag">TOTAL</span> ${totalPts}</span>
           </div>
         </div>
       </td>

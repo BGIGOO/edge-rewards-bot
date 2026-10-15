@@ -57,14 +57,14 @@ function updateUIState() {
   if (metaModeBadge) {
     if (isRunning) {
       let modeName = `Đang chạy: ${(task.mode || "").toUpperCase()}`;
-      if (task.mode === "desktop") modeName = "🖥️ PC Search (31 lượt)";
-      else if (task.mode === "mobile") modeName = "📱 Mobile Search (21 lượt)";
-      else if (task.mode === "all") modeName = "🚀 Full (PC + Mobile)";
+      if (task.mode === "desktop") modeName = "PC Search (31 lượt)";
+      else if (task.mode === "mobile") modeName = "Mobile Search (21 lượt)";
+      else if (task.mode === "all") modeName = "Full (PC + Mobile)";
       metaModeBadge.className = "meta-chip chip-running";
       metaModeBadge.innerText = modeName;
     } else {
       metaModeBadge.className = "meta-chip chip-idle";
-      metaModeBadge.innerText = "💤 Sẵn sàng (Idle)";
+      metaModeBadge.innerText = "Sẵn sàng (Idle)";
     }
   }
 
