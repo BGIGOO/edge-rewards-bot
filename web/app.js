@@ -1407,8 +1407,8 @@ async function loadAndroidStatus() {
       if (hasFrames) {
         checkinThumbStrip.classList.remove("hidden");
         checkinNoThumb.classList.add("hidden");
-        if (checkinThumbBefore) checkinThumbBefore.src = `/static/android_checkin_before.png?t=${t}`;
-        if (checkinThumbAfter) checkinThumbAfter.src = `/static/android_checkin_after.png?t=${t}`;
+        if (checkinThumbBefore) checkinThumbBefore.src = `/screenshots/android_checkin_before.png?t=${t}`;
+        if (checkinThumbAfter) checkinThumbAfter.src = `/screenshots/android_checkin_after.png?t=${t}`;
       } else {
         checkinThumbStrip.classList.add("hidden");
         checkinNoThumb.classList.remove("hidden");
@@ -1624,8 +1624,8 @@ async function toggleAutoCheckin(enabled) {
 function openFrameModal() {
   if (androidFrameModal) {
     const t = Date.now();
-    if (imgFrameBefore) imgFrameBefore.src = `/static/android_checkin_before.png?t=${t}`;
-    if (imgFrameAfter) imgFrameAfter.src = `/static/android_checkin_after.png?t=${t}`;
+    if (imgFrameBefore) imgFrameBefore.src = `/screenshots/android_checkin_before.png?t=${t}`;
+    if (imgFrameAfter) imgFrameAfter.src = `/screenshots/android_checkin_after.png?t=${t}`;
     androidFrameModal.classList.remove("hidden");
   }
 }

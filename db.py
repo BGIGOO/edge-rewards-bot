@@ -252,7 +252,7 @@ def update_profile_db(profile_id, name=None, email=None, custom_path=None, statu
 
     if custom_path is not None:
         updates.append("path = ?")
-        params.append(custom_path)
+        params.append(str(resolve_profile_path(custom_path)))
 
     if status is not None:
         updates.append("status = ?")

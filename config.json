@@ -14,7 +14,7 @@
     "human_typing_speed_max": 0.1
   },
   "browser_settings": {
-    "profile_directory_path": "./edge_profile",
+    "profile_directory_path": "data/profiles/edge_profile",
     "headless": false,
     "mobile_device_name": "Pixel 7"
   },

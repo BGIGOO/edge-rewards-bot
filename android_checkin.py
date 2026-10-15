@@ -848,7 +848,7 @@ def main():
 
     if args.test_screen:
         bot.ensure_connected()
-        test_path = os.path.join(SCRIPT_DIR, "test_device_screen.png")
+        test_path = os.path.join(SCREENSHOTS_DIR, "test_device_screen.png")
         img = bot.capture_screenshot(test_path)
         if img:
             log(f"Đã chụp ảnh thử thành công: {test_path} ({img.size[0]}x{img.size[1]})", "success")

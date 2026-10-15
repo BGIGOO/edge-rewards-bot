@@ -56,16 +56,22 @@ except ImportError:
     from selenium.webdriver.support import expected_conditions as EC
     from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
-# Duong dan thu muc script
+# Duong dan thu muc script va paths tap trung (theo rule 01_architecture)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
-
-# Import KEYWORDS_PATH tu paths.py (theo rule 01_architecture)
 try:
-    from src.core.paths import KEYWORDS_PATH as _KW_PATH
+    from src.core.paths import (
+        KEYWORDS_PATH as _KW_PATH,
+        CONFIG_PATH as _CFG_PATH,
+        resolve_profile_path
+    )
     KEYWORDS_PATH = str(_KW_PATH)
+    CONFIG_PATH = str(_CFG_PATH)
 except ImportError:
+    from pathlib import Path
     KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "data", "keywords.txt")
+    CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+    def resolve_profile_path(p):
+        return Path(p)
 
 
 def load_config():
@@ -167,10 +173,10 @@ def get_profile_abs_path(target=None, base_dir=SCRIPT_DIR):
                   or target.get("browser_settings", {}).get("profile_directory_path", "./edge_profile"))
 
     p_path = os.path.expandvars(p_path)
-    if not os.path.isabs(p_path):
-        p_path = os.path.abspath(os.path.join(base_dir, p_path))
-    os.makedirs(p_path, exist_ok=True)
-    return p_path
+    # Su dung resolve_profile_path tu paths.py de luon dua ve data/profiles/ neu can
+    resolved = str(resolve_profile_path(p_path))
+    os.makedirs(resolved, exist_ok=True)
+    return resolved
 
 
 def sync_profile_from_system(profile):
