@@ -56,10 +56,16 @@ except ImportError:
     from selenium.webdriver.support import expected_conditions as EC
     from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
-# Đường dẫn thư mục script
+# Duong dan thu muc script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
-KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "keywords.txt")
+
+# Import KEYWORDS_PATH tu paths.py (theo rule 01_architecture)
+try:
+    from src.core.paths import KEYWORDS_PATH as _KW_PATH
+    KEYWORDS_PATH = str(_KW_PATH)
+except ImportError:
+    KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "data", "keywords.txt")
 
 
 def load_config():

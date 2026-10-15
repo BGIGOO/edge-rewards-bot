@@ -9,15 +9,34 @@ import json
 import sqlite3
 from datetime import datetime
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(SCRIPT_DIR, "rewards_bot.db")
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+# Import đường dẫn tập trung từ paths.py
+try:
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from src.core.paths import DB_PATH, CONFIG_PATH, PROFILES_DIR, resolve_profile_path
+    DB_PATH = str(DB_PATH)
+    CONFIG_PATH = str(CONFIG_PATH)
+except ImportError:
+    # Fallback nếu chạy độc lập (backward compat)
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    DB_PATH = os.path.join(SCRIPT_DIR, "data", "rewards_bot.db")
+    CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+    def resolve_profile_path(path_str):
+        return path_str
 
 
 def get_db_connection():
-    """Tạo kết nối SQLite với Row factory dạng dictionary"""
-    conn = sqlite3.connect(DB_PATH)
+    """Tạo kết nối SQLite với Row factory dạng dictionary.
+    
+    Theo rule 02_automation_bots:
+    - timeout=30.0: tránh lỗi 'database is locked' khi Bot + WebServer ghi đồng thời
+    - WAL mode: cho phép đọc và ghi song song không bị block
+    """
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
 
@@ -99,7 +118,9 @@ def init_db():
                 for p in profiles:
                     p_id = int(p.get("id", 1)) if str(p.get("id", "")).isdigit() else 1
                     name = p.get("name", f"Profile {p_id}")
-                    path = p.get("path", f"./edge_profile_{p_id}" if p_id != 1 else "./edge_profile")
+                    # Dùng resolve_profile_path để luôn trỏ vào data/profiles/
+                    raw_path = p.get("path", f"./edge_profile_{p_id}" if p_id != 1 else "./edge_profile")
+                    path = str(resolve_profile_path(raw_path))
                     prof_dir = p.get("profile_directory", "Default")
                     email = name if "@" in name else ""
                     status = "ready" if email else "unlogged"
@@ -178,7 +199,13 @@ def add_profile_db(name=None, custom_path=None, profile_directory=None):
         name = f"Chưa đăng nhập (Profile {next_id})"
 
     if not custom_path:
-        custom_path = f"./edge_profile_{next_id}" if next_id != 1 else "./edge_profile"
+        # Luôn tạo profile mới trong data/profiles/ theo rule 01_architecture
+        folder = "edge_profile" if next_id == 1 else f"edge_profile_{next_id}"
+        try:
+            from src.core.paths import PROFILES_DIR as _PROFILES_DIR
+            custom_path = str(_PROFILES_DIR / folder)
+        except ImportError:
+            custom_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "profiles", folder)
 
     # Profile mới độc lập luôn dùng thư mục 'Default' bên trong folder riêng của nó
     if not profile_directory:
@@ -305,7 +332,10 @@ def get_recent_history(limit=20):
 
 
 def save_android_checkin_result(status, message="", frame_before="", frame_after="", device="100.71.117.39:5555"):
-    """Lưu kết quả điểm danh Android vào SQLite và cập nhật trạng thái profile chính"""
+    """Lưu kết quả điểm danh Android vào SQLite và cập nhật trạng thái tất cả profile.
+    
+    Không còn hardcode WHERE id=1 — cập nhật tất cả profiles đang ở trạng thái 'ready'.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -313,15 +343,15 @@ def save_android_checkin_result(status, message="", frame_before="", frame_after
         (device, status, message, frame_before, frame_after)
         VALUES (?, ?, ?, ?, ?)
     """, (device, status, message, frame_before, frame_after))
-    
-    # Cập nhật trạng thái vào Profile 1 (Profile chính liên kết với App Bing)
+
+    # Cập nhật app_checkin_status cho TẤT CẢ profiles đang active (không hardcode id=1)
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
     cursor.execute("""
         UPDATE profiles 
-        SET app_checkin_status = ?, app_checkin_time = ? 
-        WHERE id = 1
+        SET app_checkin_status = ?, app_checkin_time = ?
+        WHERE status IN ('ready', 'running')
     """, (status, now_str))
-    
+
     conn.commit()
     conn.close()
 

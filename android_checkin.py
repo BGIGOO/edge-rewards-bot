@@ -31,7 +31,18 @@ import numpy as np
 from PIL import Image
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-WEB_STATIC_DIR = os.path.join(SCRIPT_DIR, "web")
+
+# Import SCREENSHOTS_DIR tu paths.py (theo rule 01_architecture)
+try:
+    import sys as _sys
+    _sys.path.insert(0, SCRIPT_DIR)
+    from src.core.paths import SCREENSHOTS_DIR as _SCREENSHOTS_DIR
+    SCREENSHOTS_DIR = str(_SCREENSHOTS_DIR)
+except ImportError:
+    # Fallback neu chay doc lap
+    SCREENSHOTS_DIR = os.path.join(SCRIPT_DIR, "data", "screenshots")
+
+os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
 
 def find_adb_path():
@@ -703,7 +714,8 @@ class AndroidBingCheckinBot:
         human_sleep(2.5, 3.5)
 
         # 5. Chụp ảnh màn hình trước khi điểm danh
-        frame_before_path = os.path.join(WEB_STATIC_DIR, "android_checkin_before.png")
+        # Luu anh truoc khi diem danh vao data/screenshots/ (theo rule 01_architecture)
+        frame_before_path = os.path.join(SCREENSHOTS_DIR, "android_checkin_before.png")
         log("Chụp ảnh màn hình để phân tích trạng thái điểm danh...", "action")
         img_before = None
         for attempt in range(3):
@@ -755,7 +767,8 @@ class AndroidBingCheckinBot:
         human_sleep(3.5, 5.0)
 
         # 7. Chụp ảnh màn hình xác nhận kết quả
-        frame_after_path = os.path.join(WEB_STATIC_DIR, "android_checkin_after.png")
+        # Luu anh sau khi diem danh vao data/screenshots/ (theo rule 01_architecture)
+        frame_after_path = os.path.join(SCREENSHOTS_DIR, "android_checkin_after.png")
         log("Chụp ảnh màn hình đối soát kết quả sau khi bấm...", "action")
         img_after = self.capture_screenshot(frame_after_path)
 

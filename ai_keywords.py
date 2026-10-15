@@ -26,8 +26,16 @@ except Exception:
     pass
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "keywords.txt")
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+
+# Import duong dan tap trung tu paths.py (theo rule 01_architecture)
+try:
+    sys.path.insert(0, SCRIPT_DIR)
+    from src.core.paths import KEYWORDS_PATH as _KW_PATH, CONFIG_PATH as _CFG_PATH
+    KEYWORDS_PATH = str(_KW_PATH)
+    CONFIG_PATH = str(_CFG_PATH)
+except ImportError:
+    KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "data", "keywords.txt")
+    CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
 
 
 def count_words(text):

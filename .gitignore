@@ -1,13 +1,29 @@
 # ====================================================================
 # BẢO MẬT: Tuyệt đối không đưa Profile Edge (chứa Cookie, Session, Passwords) lên Git
 # ====================================================================
+
+# -- [MỚI] Toàn bộ thư mục data/ là dữ liệu runtime, KHÔNG bao giờ commit --
+data/profiles/
+data/profiles/*
+data/screenshots/
+data/screenshots/*
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# -- Fallback: phòng trường hợp profiles vẫn còn ở root (backward compat) --
 edge_profile/
-edge_profile/*
 edge_profile_*/
-edge_profile_*/*
-edge_profile*
 **/edge_profile*/**
 DevToolsActivePort
+
+# -- Screenshots lưu lạc (nếu code cũ còn chạy) --
+android_checkin_before.png
+android_checkin_after.png
+test_device_screen.png
+*.png
+!web/*.png
+!web/**/*.png
 
 # Môi trường bí mật & Token cá nhân
 .env

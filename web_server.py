@@ -45,11 +45,24 @@ from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-WEB_DIR = os.path.join(SCRIPT_DIR, "web")
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
-KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "keywords.txt")
 
-# Import các hàm tiện ích từ bot
+# Import duong dan tap trung tu src/core/paths.py (theo rule 01_architecture)
+try:
+    sys.path.insert(0, SCRIPT_DIR)
+    from src.core.paths import (
+        WEB_DIR, CONFIG_PATH, KEYWORDS_PATH, SCREENSHOTS_DIR
+    )
+    WEB_DIR = str(WEB_DIR)
+    CONFIG_PATH = str(CONFIG_PATH)
+    KEYWORDS_PATH = str(KEYWORDS_PATH)
+    SCREENSHOTS_DIR = str(SCREENSHOTS_DIR)
+except ImportError:
+    WEB_DIR = os.path.join(SCRIPT_DIR, "web")
+    CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+    KEYWORDS_PATH = os.path.join(SCRIPT_DIR, "data", "keywords.txt")
+    SCREENSHOTS_DIR = os.path.join(SCRIPT_DIR, "data", "screenshots")
+
+# Import cac ham tien ich tu bot
 sys.path.insert(0, SCRIPT_DIR)
 from edge_rewards_bot import (
     load_config,
@@ -301,10 +314,11 @@ class BotTaskManager:
 
             if success:
                 self.add_log("🎉 [THÀNH CÔNG] Đã hoàn thành điểm danh App Bing Android!", "success")
-                db.save_android_checkin_result("completed", "Điểm danh thành công!", "/static/android_checkin_before.png", "/static/android_checkin_after.png", dev)
+                # URL ảnh trỏ vào /screenshots/ (mount riêng từ data/screenshots/)
+                db.save_android_checkin_result("completed", "Điểm danh thành công!", "/screenshots/android_checkin_before.png", "/screenshots/android_checkin_after.png", dev)
             else:
                 self.add_log(f"⚠️ Điểm danh Android kết thúc với mã {code}.", "warn")
-                db.save_android_checkin_result("failed", f"Kết thúc với mã {code}", "/static/android_checkin_before.png", "/static/android_checkin_after.png", dev)
+                db.save_android_checkin_result("failed", f"Kết thúc với mã {code}", "/screenshots/android_checkin_before.png", "/screenshots/android_checkin_after.png", dev)
         except Exception as e:
             self.add_log(f"❌ [LỖI TIẾN TRÌNH ANDROID] {e}", "error")
             db.save_android_checkin_result("error", str(e), device=dev)
@@ -1145,9 +1159,15 @@ middleware = [
 
 app = Starlette(debug=True, routes=routes, middleware=middleware)
 
-# Mount thư mục tĩnh nếu tồn tại
+# Mount thu muc tinh neu ton tai
 if os.path.exists(WEB_DIR):
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+# Mount rieng cho screenshots (data/screenshots/) theo rule 03_web_fullstack
+import pathlib
+_screenshots_dir = pathlib.Path(SCREENSHOTS_DIR)
+_screenshots_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/screenshots", StaticFiles(directory=str(_screenshots_dir)), name="screenshots")
 
 
 def free_port(port=5000):
