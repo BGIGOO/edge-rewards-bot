@@ -1,5 +1,7 @@
 @echo off
 chcp 65001 > nul
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
 title Microsoft Edge Rewards Auto Bot
 echo ====================================================================
 echo        KHOI DONG BOT MICROSOFT REWARDS (EDGE AUTO SEARCH)

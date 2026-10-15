@@ -7,6 +7,13 @@ Chuyển tiếp toàn bộ lời gọi đến module src.bots.android đã mô-�
 import sys
 import os
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.bots.android import *  # noqa: F401, F403
 from src.bots.android import __all__

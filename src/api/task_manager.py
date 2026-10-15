@@ -6,6 +6,7 @@ Quan ly tac vu nen (Background Tasks), tien trinh chay va hang doi log.
 Tuan thu rule 01_architecture (< 250 dong) va rule 03_web_fullstack.
 """
 
+import os
 import sys
 import json
 import asyncio
@@ -17,6 +18,13 @@ from src.core.paths import ROOT_DIR
 from src.core.db import save_android_checkin_result
 from src.bots.edge.runner import load_config
 from src.bots.edge.browser import get_profile_abs_path, kill_zombie_edge_processes
+
+
+def _get_sub_env() -> Dict[str, str]:
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    return env
 
 
 async def _stream_process_logs(process, add_log_fn) -> None:
@@ -118,7 +126,7 @@ class BotTaskManager:
             cmd = [sys.executable, "-u", str(ROOT_DIR / "edge_rewards_bot.py"), "--profile", p_id, "--mode", mode, "--non-interactive"]
             try:
                 self.pc_process = await asyncio.create_subprocess_exec(
-                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, cwd=str(ROOT_DIR)
+                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, cwd=str(ROOT_DIR), env=_get_sub_env()
                 )
                 await _stream_process_logs(self.pc_process, self.add_log)
                 await self.pc_process.wait()
@@ -181,7 +189,7 @@ class BotTaskManager:
         success = False
         try:
             self.android_process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, cwd=str(ROOT_DIR)
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, cwd=str(ROOT_DIR), env=_get_sub_env()
             )
             await _stream_process_logs(self.android_process, self.add_log)
             await self.android_process.wait()

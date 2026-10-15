@@ -1,5 +1,7 @@
 @echo off
 chcp 65001 > nul
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
 title Microsoft Rewards Auto Bot - Web UI Dashboard
 echo ====================================================================
 echo        KHOI DONG GIAO DIEN WEB QUAN LY DA TAI KHOAN REWARDS
