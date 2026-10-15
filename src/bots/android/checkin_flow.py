@@ -150,8 +150,8 @@ class AndroidBingCheckinBot(ADBClient):
         }
 
 
-def run_checkin_flow(device: Optional[str] = None, pin: Optional[str] = None) -> Dict[str, Any]:
-    bot = AndroidBingCheckinBot(device=device or DEFAULT_DEVICE, pin=pin)
+def run_checkin_flow(device: Optional[str] = None, pin: Optional[str] = None, package: Optional[str] = None) -> Dict[str, Any]:
+    bot = AndroidBingCheckinBot(device=device or DEFAULT_DEVICE, pin=pin, package=package or "com.microsoft.bing")
     return bot.execute_checkin()
 
 
@@ -159,6 +159,7 @@ def main():
     parser = argparse.ArgumentParser(description="Microsoft Rewards Android Check-in Bot")
     parser.add_argument("--device", default=DEFAULT_DEVICE)
     parser.add_argument("--pin", default=None)
+    parser.add_argument("--package", default="com.microsoft.bing")
     parser.add_argument("--status", action="store_true")
     parser.add_argument("--reconnect", action="store_true")
     parser.add_argument("--open-app", action="store_true")
@@ -167,7 +168,7 @@ def main():
     parser.add_argument("--toggle-screen", action="store_true")
     args = parser.parse_args()
 
-    bot = AndroidBingCheckinBot(device=args.device, pin=args.pin)
+    bot = AndroidBingCheckinBot(device=args.device, pin=args.pin, package=args.package)
     if args.status:
         import json
         print(json.dumps(bot.get_device_status(), indent=2, ensure_ascii=False))
