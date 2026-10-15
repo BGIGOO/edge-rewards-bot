@@ -89,7 +89,7 @@ class BotTaskManager:
             return
         dead_ws = set()
         payload = json.dumps(entry, ensure_ascii=False)
-        for ws in self.active_websockets:
+        for ws in list(self.active_websockets):
             try:
                 await ws.send_text(payload)
             except Exception:

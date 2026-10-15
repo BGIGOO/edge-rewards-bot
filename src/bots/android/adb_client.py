@@ -10,6 +10,7 @@ Tuan thu rule 01_architecture (< 250 dong).
 import os
 import re
 import time
+import socket
 import shutil
 import random
 import subprocess
@@ -37,28 +38,16 @@ def human_sleep(a: float = 2.0, b: float = 5.0) -> None:
 def find_adb_path() -> str:
     """Tim kiem duong dan adb tren he thong."""
     candidates = [
-        str(ROOT_DIR / "platform-tools" / "adb.exe"),
-        str(ROOT_DIR / "adb.exe"),
+        str(ROOT_DIR / "platform-tools" / "adb.exe"), str(ROOT_DIR / "adb.exe"),
         os.path.expandvars(r"%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"),
         os.path.expandvars(r"%PROGRAMFILES%\Android\platform-tools\adb.exe"),
-        r"C:\platform-tools\adb.exe",
-        r"D:\platform-tools\adb.exe",
-        r"C:\scrcpy\adb.exe",
-        r"D:\scrcpy\adb.exe",
+        r"C:\platform-tools\adb.exe", r"D:\platform-tools\adb.exe", r"C:\scrcpy\adb.exe"
     ]
     for c in candidates:
         if os.path.isabs(c) and os.path.exists(c):
             return c
     which_adb = shutil.which("adb")
-    if which_adb and os.path.exists(which_adb):
-        return which_adb
-    try:
-        r = subprocess.run(["adb", "version"], capture_output=True, text=True, timeout=5)
-        if r.returncode == 0:
-            return "adb"
-    except Exception:
-        pass
-    return candidates[2]
+    return which_adb if which_adb else candidates[2]
 
 
 def load_default_pin() -> str:
@@ -76,14 +65,23 @@ def load_default_pin() -> str:
 
 
 def ping_host(host: str, timeout_ms: int = 1200) -> Tuple[bool, Optional[int]]:
-    """Kiem tra thong mang IP voi timeout an toan."""
+    """Kiem tra thong mang IP qua TCP socket hoac ICMP voi timeout an toan."""
+    ip = host.split(":")[0]
+    port = int(host.split(":")[1]) if ":" in host else 5555
     try:
-        cmd = ["ping", "-n", "1", "-w", str(timeout_ms), str(host)]
+        t0 = time.time()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(timeout_ms / 1000.0)
+            s.connect((ip, port))
+        return True, max(1, int((time.time() - t0) * 1000))
+    except Exception:
+        pass
+    try:
+        cmd = ["ping", "-n", "1", "-w", str(timeout_ms), str(ip)]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_ms / 1000 + 1.5)
         if r.returncode == 0:
             m = re.search(r"time[=<](\d+)ms", r.stdout)
-            ping_ms = int(m.group(1)) if m else 30
-            return True, ping_ms
+            return True, int(m.group(1)) if m else 30
     except Exception:
         pass
     return False, None
@@ -132,23 +130,32 @@ class ADBClient:
 
     def get_device_status(self) -> Dict[str, Any]:
         """Kiem tra toan dien tinh trang thiet bi Android."""
-        ip = self.device.split(":")[0]
-        net_ok, ping_ms = ping_host(ip)
+        net_ok, ping_ms = ping_host(self.device)
         adb_state = get_adb_device_state(self.adb, self.device)
+        if net_ok and adb_state != "device":
+            self._run_adb_raw("connect", self.device, timeout=3)
+            adb_state = get_adb_device_state(self.adb, self.device)
+
         is_conn = (adb_state == "device")
         screen_awake, screen_unlocked, app_running = False, False, False
+        app_status = "unreachable" if not is_conn else "closed"
 
         if is_conn:
             self._detect_screen_size()
             screen_awake = self.is_screen_awake()
             screen_unlocked = not self.is_device_locked() if screen_awake else False
             app_running = self.is_app_running()
+            if app_running:
+                focus = self._adb_shell("dumpsys", "window")
+                app_status = "foreground" if self.package in focus else "background"
 
         return {
-            "device": self.device, "connected": is_conn, "ping_ms": ping_ms,
-            "adb_state": adb_state, "screen_awake": screen_awake,
-            "screen_unlocked": screen_unlocked, "app_running": app_running,
-            "screen_size": f"{self.screen_width}x{self.screen_height}"
+            "device": self.device, "connected": is_conn, "is_connected": is_conn,
+            "ping_ok": net_ok, "ping_ms": ping_ms, "adb_state": adb_state,
+            "screen_awake": screen_awake, "screen_unlocked": screen_unlocked,
+            "app_running": app_running, "app_status": app_status,
+            "screen_size": f"{self.screen_width}x{self.screen_height}",
+            "message": "Thiết bị sẵn sàng" if is_conn else ("Mất kết nối ADB" if net_ok else "Mất mạng Tailscale")
         }
 
     def reconnect_device(self) -> bool:

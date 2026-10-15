@@ -46,7 +46,8 @@ async function loadAndroidStatus() {
     }
 
     // Network & ADB
-    const pingOk = Boolean(devStatus.ping_ok), pingMs = devStatus.ping_ms, adbState = devStatus.adb_state || "disconnected";
+    const adbState = devStatus.adb_state || (devStatus.connected ? "device" : "disconnected");
+    const pingOk = Boolean(devStatus.ping_ok || adbState === "device"), pingMs = devStatus.ping_ms || 30;
     if (checkinPingDot) {
       checkinPingDot.style.background = pingOk ? "#10B981" : "#EF4444";
       checkinPingDot.title = pingOk ? `Mạng Tailscale (${pingMs}ms)` : "Mất mạng Tailscale";
@@ -57,8 +58,8 @@ async function loadAndroidStatus() {
       checkinNetBadge.style.background = pingOk ? "#DCFCE7" : "#FEE2E2";
     }
     if (checkinConnStatus) {
-      if (!pingOk) checkinConnStatus.innerHTML = '<span style="color:#DC2626; font-weight:600;">✗ Mất VPN</span>';
-      else if (adbState === "device") checkinConnStatus.innerHTML = '<span style="color:#10B981; font-weight:600;">✓ Sẵn sàng ADB</span>';
+      if (adbState === "device") checkinConnStatus.innerHTML = '<span style="color:#10B981; font-weight:600;">✓ Sẵn sàng ADB</span>';
+      else if (!pingOk) checkinConnStatus.innerHTML = '<span style="color:#DC2626; font-weight:600;">✗ Mất VPN</span>';
       else if (adbState === "offline") checkinConnStatus.innerHTML = '<span style="color:#D97706; font-weight:600;">! ADB Offline</span>';
       else checkinConnStatus.innerHTML = '<span style="color:#DC2626; font-weight:600;">✗ Cổng 5555 đóng</span>';
     }

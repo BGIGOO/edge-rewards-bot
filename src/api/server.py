@@ -14,6 +14,27 @@ import threading
 import webbrowser
 import uvicorn
 
+if sys.platform == "win32":
+    try:
+        from asyncio.proactor_events import _ProactorBasePipeTransport
+        from functools import wraps
+
+        def _silence_winerror_10054(func):
+            @wraps(func)
+            def wrapper(self, *args, **kwargs):
+                try:
+                    return func(self, *args, **kwargs)
+                except (ConnectionResetError, OSError):
+                    pass
+            return wrapper
+
+        if hasattr(_ProactorBasePipeTransport, "_call_connection_lost"):
+            _ProactorBasePipeTransport._call_connection_lost = _silence_winerror_10054(
+                _ProactorBasePipeTransport._call_connection_lost
+            )
+    except Exception:
+        pass
+
 from starlette.applications import Starlette
 from starlette.routing import Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
